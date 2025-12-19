@@ -35,7 +35,12 @@ const char *paths_exec_path(void) {
 }
 
 const char *paths_prefix(void) {
+#ifdef PREFIX
   return PREFIX;
+#else
+  /* Fallback when configure did not define PREFIX: use current directory */
+  return ".";
+#endif
 }
 #endif
 

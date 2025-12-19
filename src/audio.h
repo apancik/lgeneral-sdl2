@@ -49,7 +49,7 @@ Wave
 ====================================================================
 */
 typedef struct {
-    Mix_Chunk   *chunk;     /* sound */
+    void        *chunk;     /* opaque pointer to Mix_Chunk; audio.c casts */
     int         channel;    /* chunk is played at this channel */
 } Wav;
 Wav* wav_load( char *fname, int channel );
