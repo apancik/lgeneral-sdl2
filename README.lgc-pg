@@ -1,0 +1,156 @@
+              
+              ===================================================
+              LGeneral Converter for Panzer General (DOS Version)
+              ===================================================
+
+
+Quickstart
+----------
+
+If you have installed LGeneral by 'make install', mount your Panzer General
+CD (e.g., to /mnt/cdrom) and run the following command as root user:
+
+    lgc-pg -s /mnt/cdrom/DAT
+
+If you do not have the CD you can download the abandonware pg-data package
+from http://lgames.sf.net, extract it (e.g., to /tmp/pg-data) and run
+the following command as root user:
+
+    lgc-pg -s /tmp/pg-data
+
+If you compiled the source with option --disable-install to play from source 
+directory (e.g., necessary to use the reinforcements editor---see README.redit
+for more) you will have to explicitly specify the destination directory. E.g.,
+if you extracted the source to ~/sources/lgeneral-X.X.X (with X.X.X being the
+version number) then you have to run the following commands:
+
+   cd ~/sources/lgeneral-X.X.X/lgc-pg
+   ./lgc-pg -s /mnt/cdrom/DAT -d ../src
+   
+Thus, the src-directory of the package is the destination for converted data
+in case installation is disabled.
+
+This will convert the original Panzer General data. The converter can also 
+convert single custom scenarios. How, is explained below.
+
+
+Usage
+-----
+
+lgc-pg -s <PG DATA DIR> 
+       -d <LGENERAL DIR> 
+       [--defpal] 
+       [-n <NAME> [-i <ID>] [-t <TACICONS>]]
+       [--applyunitmods]
+
+-s <SOURCE PATH>
+You always need to specify the source directory which contains the original 
+data or a custom scenario.
+-d <LGENERAL DIR>
+By default the data is converted to the installation path. With this option 
+another path which must contain the LGeneral data structure may be used as
+destination. If installation has been disabled it must be specified.
+--defpal
+This is optional and forces all PG images to use the default palette. 
+Usually you won't need this but if a custom scenario provides some strange 
+graphics it might be due to a corrupted palette. Using the default one for
+conversion might fix this.
+-i <ID>
+If set it signals that a single scenario should be converted instead of
+full campaign. This is the XXX in the source gameXXX.scn.
+-n <NAME>
+This is the scenario's file name and default title. This option can also be
+used when converting a campaign to change the default name (pg).
+-t <TACICONS>
+If custom tactical icons are involved (scenario offers a TACICONS.SHP) this 
+is the name of the target image file. If this option is not provided it 
+defaults to <NAME>.bmp.
+--applyunitmods
+Certain unit modifications are hardcoded to lgc-pg. Usually these are only
+applied for the original PG campaign. But if a single scenario uses a modified
+PG unit database these changes should be applied as well which is done with
+this option.
+
+
+Examples
+--------
+
+1) Converts all data from CD-ROM:
+
+    lgc-pg -s /mnt/cdrom/DAT -d /usr/local/share/games/lgeneral
+    
+2) Converts a custom scenario:
+
+    lgc-pg -s /home/michael/newstuff/dunk -d /usr/local/share/games/lgeneral
+           -n Dunkirk -i 44
+
+
+Limitations for single scenarios and custom campaigns
+-----------------------------------------------------
+
+Certain things cannot be converted from original data by lgc-pg and are thus 
+hardcoded for the original PG campaign. Therefore if a single scenario or a 
+custom campaign is converted, these things have to be adjusted *manually* after
+conversion.
+
+Hardcoded and necessarily the same for everything converted by lgc-pg are:
+  - weather types (e.g., fair)
+  - terrain types (e.g., clear)
+  - target types (e.g., soft)
+  - movement types (e.g., tracked)
+  - unit classes (e.g., infantry)
+  - nations (e.g., Germany)
+
+Of course, names and to some extend attributes can be changed directly in the 
+output files after conversion (e.g., renaming a nation).
+
+lgc-pg converts the following with some limitations:
+  - nation flags
+  - unit database
+  - unit icons
+  - terrain icons
+  - maps
+  - scenario names and descriptions
+  - scenarios
+  
+The following limitations apply:
+  - a single scenario (not converted as part of a campaign) will lack title, 
+    description and author 
+  - .order file with all scenario file names in chronological order (used for 
+    sorted list in LGeneral) is only generated for PG campaign
+  - campaign tree file is hardcoded for PG only
+  - victory conditions are hardcoded for PG only; for custom scenarios the 
+    default is that attacker has to capture all major objectives for victory
+  - prestige per turn is hardcoded for PG and guessed for custom scenarios
+  - weather is hardcoded for PG and randomly generated (but then fixed) for 
+    custom scenarios
+  - nation of a unit database entry is determined by name for PG only; in 
+    custom scenarios it defaults to none which means it is not possible to buy
+    any units unless one manually sets nations after conversion
+  - special corrections like certain unit flags (e.g., bridgeeng), spelling 
+    corrections, attribute balancing and mirroring of tactical icons are only
+    applied for PG
+
+If a single scenario uses its own unit database and it is more or less the same
+as the original database the last two items of the above list can be forced by
+option --applyunitmods. However, this may lead to corruptions, e.g., when a unit
+was totally changed and certain flags no longer apply to it. Nevertheless, in 
+general it is a good guess to run this option. A single scenario file directly 
+includes the map and modified units (but not their icons).
+
+
+Troubleshooting
+---------------
+
+1) Lars Ekman discovered that you'll have to mount the cdrom with option 
+'check=r'. So if your distro uses another option as default and 'lgc-pg'
+doesn't work just try:
+
+    mount -o check=r /mnt/cdrom
+    
+2) NOTE: I found various notes in the Internet that this format explicitly 
+requires Panzer General *DOS* version so I guess the Win32 version won't work.
+
+
+Enjoy! 
+    Michael Speck

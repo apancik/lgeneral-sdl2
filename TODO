@@ -1,0 +1,36 @@
+- core units can be deployed later???
+- transfer prestige?
+- strat map icon for deploy window
+
+**** Gameplay
+
+- ingame help screen with all shortcuts and interface explanation
+- France with 25/30 turns instead of 13/26 ???
+
+**** Display
+
+- victory hexes are bad to see many units are arround
+- edit sometimes broken? (string too long, many blanks)
+- add a video mode of 800x480 for Nokia devices
+
+**** AI 
+
+- does not use carpet bombing yet
+- whether enemy may attack a truck position must be checked not only
+  by getting the plain distance but by computing the required path 
+  to allow placement behind a closed front line
+- aricrafts out of action do not return to game
+- during AI move view is not toggled (can't see airplan damage)
+- check bug: paratroops do not attack in crete and south france
+- airplanes do not return though out of fuel and in reach
+  of an airfield (warsaw)
+- trucks cannot pass rivers in bad weather and they don't try to take
+  the longer way around
+- AI must protect own cities with units
+- AI groups: implement execution order (artillery fire, bombers, 
+  fighters, ground units, artillery movement)
+- loop execution several times to move when a unit which is 
+  handled later blocked the destination position
+- tweak tactical action scores (are quite good already though)
+- AI does not protect airborne units
+- AI does not go for U-boots
