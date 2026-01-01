@@ -101,7 +101,7 @@ Group *group_create( SDL_Surface *frame, int alpha, SDL_Surface *img, int w, int
         fprintf( stderr, "group_create: passed button surface is NULL: %s\n", SDL_GetError() );
         goto failure;
     }
-    SDL_SetColorKey( img, SDL_SRCCOLORKEY, 0x0 );
+    SDL_SetColorKey( img, SDL_TRUE, 0x0 );
     group->img = img;
     group->w = w; group->h = h;
     group->base_id = base_id;
@@ -288,9 +288,12 @@ void group_draw( Group *group )
     int i;
     frame_draw( group->frame );
     if ( !group->frame->img->bkgnd->hide )
-        for ( i = 0; i < group->button_count; i++ )
-            SDL_BlitSurface( group->img, &group->buttons[i].button_rect,
-                             group->frame->img->bkgnd->surf, &group->buttons[i].surf_rect );
+        for ( i = 0; i < group->button_count; i++ ) {
+            DEST( group->frame->img->bkgnd->surf, group->buttons[i].surf_rect.x, group->buttons[i].surf_rect.y,
+                  group->buttons[i].surf_rect.w, group->buttons[i].surf_rect.h );
+            SOURCE( group->img, group->buttons[i].button_rect.x, group->buttons[i].button_rect.y );
+            blit_surf();
+        }
 }
 
 /*
@@ -393,6 +396,8 @@ void edit_show( Edit *edit, const char *newtext )
     /* show cursor */
     edit->blink = 1;
     edit->blink_time = 0; 
+    /* enable SDL text input for UTF-8 input while editing */
+    SDL_StartTextInput();
     /* apply */
     label_write( edit->label, 0, edit->text );
 }
@@ -529,7 +534,7 @@ LBox *lbox_create( SDL_Surface *frame, int alpha, int border, SDL_Surface *butto
     lbox->cell_gap = cell_gap;
     lbox->cell_color = cell_color;
     lbox->cell_x = lbox->cell_y = border;
-    lbox->cell_buffer = create_surf( cell_w, cell_h, SDL_SWSURFACE );
+    lbox->cell_buffer = create_surf( cell_w, cell_h, 0 );
     lbox->render_cb = cb;
     /* up/down */
     bx = ( frame->w / 2 - button_w ) / 2;
@@ -765,7 +770,7 @@ FDlg *fdlg_create(
     info_h = conf_frame->h - 3 * border - conf_button_h;
     dlg->info_x = border;
     dlg->info_y = border;
-    dlg->info_buffer = create_surf( info_w, info_h, SDL_SWSURFACE );
+    dlg->info_buffer = create_surf( info_w, info_h, 0 );
     /* path */
     strcpy( dlg->root, "/" );
     dlg->subdir[0] = 0;
@@ -1234,6 +1239,11 @@ void select_dlg_get_bkgnd( SelectDlg *sdlg)
 	group_get_bkgnd(sdlg->button_group);
 	lbox_get_bkgnd(sdlg->select_lbox);
 }
+void select_dlg_set_surface( SelectDlg *sdlg, SDL_Surface *surf )
+{
+	group_set_surface(sdlg->button_group, surf);
+	lbox_set_surface(sdlg->select_lbox, surf);
+}
 
 int select_dlg_handle_motion( SelectDlg *sdlg, int cx, int cy)
 {
@@ -1299,7 +1309,7 @@ void mmview_resize_viewport(MMView *mmv)
 	mmv->vsx = (mmv->w - minimap->w)/2;
 	mmv->vsy = (mmv->h - minimap->h)/2;
 	free_surf(&mmv->viewport_box);
-	mmv->viewport_box = create_surf(mmv->vw,mmv->vh,SDL_SWSURFACE);
+    mmv->viewport_box = create_surf(mmv->vw,mmv->vh,0);
 	FULL_DEST(mmv->viewport_box);
 	fill_surf(0xffffff);
 	DEST(mmv->viewport_box,1,1,mmv->vw-2,mmv->vh-2);
@@ -1329,6 +1339,11 @@ void mmview_adjust_viewport(MMView *mmv)
 void mmview_move(MMView *mmv, int x, int y)
 {
 	frame_move(mmv->minimap_frame,x,y);
+}
+
+void mmview_set_surface(MMView *mmv, SDL_Surface *surf)
+{
+	frame_set_surface(mmv->minimap_frame, surf);
 }
 
 void mmview_hide(MMView *mmv, int hide)

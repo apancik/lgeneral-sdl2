@@ -19,7 +19,10 @@
 #define __MISC_H
 
 #include "config.h"
-#include <SDL.h> 
+#include <SDL.h>
+
+/* Global surface used by lgc-pg utilities when no window is present */
+extern SDL_Surface *lgcpg_screen;
 
 /* check if number is odd or even */
 #define ODD( x ) ( x & 1 )

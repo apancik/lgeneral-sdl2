@@ -41,6 +41,7 @@ typedef struct {
 #define SDL_NONFATAL 0x10000000
 SDL_Surface* load_surf(const char *fname, int f);
 SDL_Surface* create_surf(int w, int h, int f);
+SDL_Surface* colorkey_to_alpha(SDL_Surface *surf, Uint32 color_key);
 void free_surf( SDL_Surface **surf );
 int  disp_format(SDL_Surface *sur);
 inline void lock_surf(SDL_Surface *sur);
@@ -112,6 +113,7 @@ typedef struct {
 	int fullscreen;
 } VideoModeInfo;
 typedef struct {
+    SDL_Window  *window;
     SDL_Surface *screen;
     DrawRgn     d, s;
     int         rect_count;

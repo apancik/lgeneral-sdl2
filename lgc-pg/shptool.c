@@ -152,9 +152,7 @@ static void init_sdl() {
   verbosef(2, "Initialising SDL...\n");
   verbosef(3, "SDL_Init\n");
   /* SDL required for graphical conversion */
-  SDL_Init( SDL_INIT_VIDEO | SDL_INIT_TIMER );
-  verbosef(3, "SDL_SetVideoMode\n");
-  SDL_SetVideoMode( 20, 20, 16, SDL_SWSURFACE );
+  SDL_Init( SDL_INIT_VIDEO | SDL_INIT_TIMER );  
   verbosef(3, "Registering exit-handler\n");
   atexit( SDL_Quit );
 }

@@ -106,9 +106,10 @@ Wav* wav_load( char *fname, int channel )
     /* use SRCDIR/sounds as source directory */
     sprintf( path, "%s/sounds/%s", get_gamedir(), fname );
     wav->chunk = Mix_LoadWAV( path );
-    if ( wav->chunk == 0 ) {
-        fprintf( stderr, "%s\n", SDL_GetError() );
+    if ( wav->chunk == NULL ) {
+        fprintf( stderr, "%s\n", Mix_GetError() );
         free( wav ); wav = 0;
+        return 0;
     }
     wav->channel = channel;
     return wav;

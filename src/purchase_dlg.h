@@ -41,6 +41,7 @@ void purchase_dlg_hide( PurchaseDlg *pdlg, int value);
 void purchase_dlg_draw( PurchaseDlg *pdlg);
 void purchase_dlg_draw_bkgnd( PurchaseDlg *pdlg);
 void purchase_dlg_get_bkgnd( PurchaseDlg *pdlg);
+void purchase_dlg_set_surface( PurchaseDlg *pdlg, SDL_Surface *surf );
 
 int purchase_dlg_handle_motion( PurchaseDlg *pdlg, int cx, int cy);
 int purchase_dlg_handle_button( PurchaseDlg *pdlg, int bid, int cx, int cy, 

@@ -1,80 +1,33 @@
-# Build directories
+# Build artifacts
 /build/
-/CMakeFiles/
-/CMakeCache.txt
-/cmake_install.cmake
-/Makefile
-/build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
 
-# Compiled objects
+# Compiled objects and libraries
 *.o
+*.obj
 *.lo
 *.la
-*.al
-*.lai
-
-# Static and shared libraries
 *.a
 *.so
 *.dylib
 
 # Executables
-/bin/
-/bin/*
-/*.exe
-/*.dll
-/*.so
-
-# Autotools/Generated files
-/config.status
-/config.cache
-/config.log
-/config.h
-/config.h.in
-/compile
-/configure
-/Makefile.in
-/Makefile
-/aclocal.m4
-/autom4te.cache/
-/missing
-/install-sh
-
-# libtool
-/.libs/
-
-# Locale files
-po/*.mo
-
-# Editor/project files
-.vscode/
-.idea/
-*.swp
-*~
-.DS_Store
+*.exe
+*.out
 
 # Logs
 *.log
 
-# macOS
+# Generated gettext files
+*.mo
+
+# macOS and editor junk
 .DS_Store
+*~
+*.swp
+.vscode/
+.idea/
 
-# CMake
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-CTestTestfile.cmake
-
-# Temporary
-*.tmp
-*.temp
-
-# Python
-__pycache__/
-*.pyc
-
-# Ignore build artifacts and local installations
-local/
-
-# Node/npm
-node_modules/

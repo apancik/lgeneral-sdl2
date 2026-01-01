@@ -284,7 +284,7 @@ void strat_map_create()
         ckey = get_pixel( terrain_types[i].images[0], 0, 0 );
         FULL_DEST( strat_tile_pic[i] );
         fill_surf( ckey );
-        SDL_SetColorKey( strat_tile_pic[i], SDL_SRCCOLORKEY, ckey );
+        SDL_SetColorKey( strat_tile_pic[i], SDL_TRUE, ckey );
         /* copy pixels from pic to strat_pic if strat_fog is none transparent */
         for ( j = 0; j < strat_tile_count; j++ )
             for ( x = 0; x < strat_tile_width; x++ )

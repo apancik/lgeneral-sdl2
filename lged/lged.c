@@ -25,7 +25,9 @@
     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 #include <getopt.h>
 
 #include <assert.h>
@@ -37,7 +39,10 @@
 #include "config.h"
 
 #include "list.h"
-#include "misc.h"
+/* editor-specific definitions */
+#include "../lgeneral-redit/src/misc.h"
+/* core project declarations (get_gamedir etc.) */
+#include "../src/misc.h"
 
 extern const char *scenarios[];
 extern const char *unit_classes[];

@@ -16,7 +16,7 @@
  ***************************************************************************/
 
 #ifdef HAVE_CONFIG_H
-#include "../config.h"
+#include "config.h"
 #endif
 
 #include <stdio.h>
@@ -189,16 +189,21 @@ int main( int argc, char **argv )
         printf( "lgc-pg requires a running graphical desktop environment. \n");
         exit( 1 );
     }
-    SDL_SetVideoMode( 320, 240, 16, SDL_SWSURFACE );
+    /* initialize a small software surface for lgc-pg (no window needed) */
+    if (SDL_Init( SDL_INIT_VIDEO | SDL_INIT_TIMER ) < 0) {
+        printf( "lgc-pg requires a running graphical desktop environment. \n");
+        exit( 1 );
+    }
+    SDL_Surface *screen = SDL_CreateRGBSurface(0, 320, 240, 32,
+                                                0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+    lgcpg_screen = screen;
     atexit( SDL_Quit );
     /* show nice image */
     snprintf( path, MAXPATHLEN, "%s/convdata/title.bmp", get_gamedir() );
     if ((title_image = SDL_LoadBMP( path ))) {
-	    SDL_Surface *screen = SDL_GetVideoSurface();
-	    SDL_BlitSurface( title_image, NULL, screen, NULL);
-	    SDL_UpdateRect( screen, 0, 0, screen->w, screen->h );
+    	    if (screen) SDL_BlitSurface( title_image, NULL, screen, NULL);
     }
-    SDL_WM_SetCaption( "lgc-pg", NULL );
+    (void)screen;
     
     printf( "Converting:\n" );
     if ( single_scen ) {

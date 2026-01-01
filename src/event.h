@@ -22,9 +22,10 @@
 ====================================================================
 Event filter. As long as this is active no KEY or MOUSE events
 will be available by SDL_PollEvent().
+Note: SDL2 event filter signature accepts a userdata pointer.
 ====================================================================
 */
-int event_filter( const SDL_Event *event );
+int event_filter( void *userdata, SDL_Event *event );
 
 /*
 ====================================================================

@@ -116,28 +116,49 @@ int terrain_load( char *fname )
     terrain_icons = calloc( 1, sizeof( Terrain_Icons ) );
     if ( !parser_get_value( pd, "fog", &str, 0 ) ) goto parser_failure;
     sprintf( path, "terrain/%s", str );
-    if ( ( terrain_icons->fog = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure;
+    if ( ( terrain_icons->fog = load_surf( path, 0 ) ) == 0 ) goto failure;
     if ( !parser_get_value( pd, "danger", &str, 0 ) ) goto parser_failure;
     sprintf( path, "terrain/%s", str );
-    if ( ( terrain_icons->danger = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure;
+    if ( ( terrain_icons->danger = load_surf( path, 0 ) ) == 0 ) goto failure;
+    terrain_icons->danger = colorkey_to_alpha( terrain_icons->danger,
+            get_pixel( terrain_icons->danger, 0, 0 ) );
     if ( !parser_get_value( pd, "grid", &str, 0 ) ) goto parser_failure;
     sprintf( path, "terrain/%s", str );
-    if ( ( terrain_icons->grid = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure;
+    if ( ( terrain_icons->grid = load_surf( path, 0 ) ) == 0 ) goto failure;
+    terrain_icons->grid = colorkey_to_alpha( terrain_icons->grid,
+            get_pixel( terrain_icons->grid, 0, 0 ) );
     if ( !parser_get_value( pd, "frame", &str, 0 ) ) goto parser_failure;
     sprintf( path, "terrain/%s", str );
-    if ( ( terrain_icons->select = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure;
+    if ( ( terrain_icons->select = load_surf( path, 0 ) ) == 0 ) goto failure;
+    terrain_icons->select = colorkey_to_alpha( terrain_icons->select,
+            get_pixel( terrain_icons->select, 0, 0 ) );
     if ( !parser_get_value( pd, "crosshair", &str, 0 ) ) goto parser_failure;
     sprintf( path, "terrain/%s", str );
-    if ( ( terrain_icons->cross = anim_create( load_surf( path, SDL_SWSURFACE ), 1000/config.anim_speed, hex_w, hex_h, sdl.screen, 0, 0 ) ) == 0 )
+    {
+        SDL_Surface *cross_surf = load_surf( path, 0 );
+        if ( cross_surf )
+            cross_surf = colorkey_to_alpha( cross_surf, get_pixel( cross_surf, 0, 0 ) );
+        if ( ( terrain_icons->cross = anim_create( cross_surf, 1000/config.anim_speed, hex_w, hex_h, sdl.screen, 0, 0 ) ) == 0 )
         goto failure;
+    }
     anim_hide( terrain_icons->cross, 1 );
     if ( !parser_get_value( pd, "explosion", &str, 0 ) ) goto parser_failure;
     sprintf( path, "terrain/%s", str );
-    if ( ( terrain_icons->expl1 = anim_create( load_surf( path, SDL_SWSURFACE ), 50/config.anim_speed, hex_w, hex_h, sdl.screen, 0, 0 ) ) == 0 )
+    {
+        SDL_Surface *expl = load_surf( path, 0 );
+        if ( expl )
+            expl = colorkey_to_alpha( expl, get_pixel( expl, 0, 0 ) );
+        if ( ( terrain_icons->expl1 = anim_create( expl, 50/config.anim_speed, hex_w, hex_h, sdl.screen, 0, 0 ) ) == 0 )
         goto failure;
+    }
     anim_hide( terrain_icons->expl1, 1 );
-    if ( ( terrain_icons->expl2 = anim_create( load_surf( path, SDL_SWSURFACE ), 50/config.anim_speed, hex_w, hex_h, sdl.screen, 0, 0 ) ) == 0 )
-        goto failure;
+    {
+        SDL_Surface *expl = load_surf( path, 0 );
+        if ( expl )
+            expl = colorkey_to_alpha( expl, get_pixel( expl, 0, 0 ) );
+        if ( ( terrain_icons->expl2 = anim_create( expl, 50/config.anim_speed, hex_w, hex_h, sdl.screen, 0, 0 ) ) == 0 )
+            goto failure;
+    }
     anim_hide( terrain_icons->expl2, 1 );
     /* terrain sounds */
 #ifdef WITH_SOUND    
@@ -168,9 +189,11 @@ int terrain_load( char *fname )
             }
             else {
                 sprintf( path, "terrain/%s", str );
-                if ( ( terrain_types[i].images[j] = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto parser_failure;
-                SDL_SetColorKey( terrain_types[i].images[j], SDL_SRCCOLORKEY, 
-                                 get_pixel( terrain_types[i].images[j], 0, 0 ) );
+                if ( ( terrain_types[i].images[j] = load_surf( path, 0 ) ) == 0 ) goto parser_failure;
+                SDL_SetColorKey( terrain_types[i].images[j], SDL_TRUE,
+                    get_pixel( terrain_types[i].images[j], 0, 0 ) );
+                terrain_types[i].images[j] = colorkey_to_alpha( terrain_types[i].images[j],
+                    get_pixel( terrain_types[i].images[j], 0, 0 ) );
             }
         }
         /* fog image */
@@ -181,7 +204,7 @@ int terrain_load( char *fname )
                 terrain_types[i].images_fogged[j] = terrain_types[i].images_fogged[0];
             }
             else {
-                terrain_types[i].images_fogged[j] = create_surf( terrain_types[i].images[j]->w, terrain_types[i].images[j]->h, SDL_SWSURFACE );
+                terrain_types[i].images_fogged[j] = create_surf( terrain_types[i].images[j]->w, terrain_types[i].images[j]->h, 0 );
                 FULL_DEST( terrain_types[i].images_fogged[j]  );
                 FULL_SOURCE( terrain_types[i].images[j] );
                 blit_surf();
@@ -191,7 +214,9 @@ int terrain_load( char *fname )
                     SOURCE(  terrain_icons->fog, 0, 0 );
                     alpha_blit_surf( FOG_ALPHA );
                 }
-                SDL_SetColorKey( terrain_types[i].images_fogged[j], SDL_SRCCOLORKEY, get_pixel( terrain_types[i].images[j], 0, 0 ) );
+                SDL_SetColorKey( terrain_types[i].images_fogged[j], SDL_TRUE, get_pixel( terrain_types[i].images[j], 0, 0 ) );
+                terrain_types[i].images_fogged[j] = colorkey_to_alpha( terrain_types[i].images_fogged[j],
+                    get_pixel( terrain_types[i].images[j], 0, 0 ) );
             }
         }
         /* spot cost */
@@ -236,7 +261,7 @@ int terrain_load( char *fname )
         for ( k = 0; k < i * log_dot_limit / entries->count; k++ )
             log_str[3 + k] = '*';
         write_text( log_font, sdl.screen, log_x, log_y, log_str, 255 );
-        SDL_UpdateRect( sdl.screen, log_font->last_x, log_font->last_y, log_font->last_width, log_font->last_height );
+        refresh_screen( log_font->last_x, log_font->last_y, log_font->last_width, log_font->last_height );
     }
     parser_free( &pd );
     /* LOG */

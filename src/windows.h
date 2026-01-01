@@ -18,6 +18,7 @@
 #ifndef __WINDOWS_H
 #define __WINDOWS_H
 
+#include "lgeneral.h"
 #include "image.h"
 
 /*
@@ -216,7 +217,7 @@ void edit_delete( Edit **edit );
 Draw label
 ====================================================================
 */
-#define edit_hide( edit, hide ) buffer_hide( edit->label->frame->img->bkgnd, hide )
+#define edit_hide( edit, hide ) do { if (hide) SDL_StopTextInput(); buffer_hide( edit->label->frame->img->bkgnd, hide ); } while(0)
 #define edit_get_bkgnd( edit ) buffer_get( edit->label->frame->img->bkgnd )
 #define edit_draw_bkgnd( edit ) buffer_draw( edit->label->frame->img->bkgnd )
 void edit_draw( Edit *edit );
@@ -537,6 +538,7 @@ void select_dlg_hide( SelectDlg *sdlg, int value);
 void select_dlg_draw( SelectDlg *sdlg);
 void select_dlg_draw_bkgnd( SelectDlg *sdlg);
 void select_dlg_get_bkgnd( SelectDlg *sdlg);
+void select_dlg_set_surface( SelectDlg *sdlg, SDL_Surface *surf );
 int select_dlg_handle_motion( SelectDlg *sdlg, int cx, int cy);
 int select_dlg_handle_button( SelectDlg *sdlg, int bid, int cx, int cy, 
 	Button **pbtn );
@@ -564,6 +566,7 @@ void mmview_delete(MMView **mmv);
 void mmview_resize_viewport(MMView *mmv);
 void mmview_adjust_viewport(MMView *mmv);
 void mmview_move(MMView *mmv, int x, int y);
+void mmview_set_surface(MMView *mmv, SDL_Surface *surf);
 #define mmview_get_bkgnd(__MMV) frame_get_bkgnd((__MMV)->minimap_frame)
 #define mmview_draw_bkgnd(__MMV) frame_draw_bkgnd((__MMV)->minimap_frame)
 #define mmview_draw(__MMV) frame_draw((__MMV)->minimap_frame)

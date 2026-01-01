@@ -21,7 +21,7 @@
 int buttonup = 0, buttondown = 0;
 int motion = 0;
 int motion_x = 50, motion_y = 50;
-int keystate[SDLK_LAST];
+static Uint8 keystate_map[SDL_NUM_SCANCODES];
 int buttonstate[10];
 int sdl_quit = 0;
 
@@ -37,7 +37,7 @@ Event filter that blocks all events. Used to clear the SDL
 event queue.
 ====================================================================
 */
-int all_filter( const SDL_Event *event )
+int all_filter( void *userdata, SDL_Event *event )
 {
     return 0;
 }
@@ -49,16 +49,14 @@ Returns whether any mouse button is pressed
 */
 static int event_is_button_pressed()
 {
-    return (SDL_GetMouseState(0,0)!=0);
+    return (SDL_GetMouseState(NULL, NULL) != 0);
 }
 static int event_is_key_pressed()
 {
+    const Uint8 *ks = SDL_GetKeyboardState(NULL);
     int i;
-    Uint8 *keystate=SDL_GetKeyState(0);
-    for (i=0;i<SDLK_LAST;i++) 
-    {
-        if (i==SDLK_NUMLOCK||i==SDLK_CAPSLOCK||i==SDLK_SCROLLOCK) continue;
-        if (keystate[i]) return 1;
+    for (i = 0; i < SDL_NUM_SCANCODES; i++) {
+        if (ks[i]) return 1;
     }
     return 0;
 }
@@ -69,29 +67,35 @@ Event filter. As long as this is active no KEY or MOUSE events
 will be available by SDL_PollEvent().
 ====================================================================
 */
-int event_filter( const SDL_Event *event )
+int event_filter( void *userdata, SDL_Event *event )
 {
     switch ( event->type ) {
         case SDL_MOUSEMOTION:
             motion_x = event->motion.x;
             motion_y = event->motion.y;
-            buttonstate[event->motion.state] = 1;
+            buttonstate[BUTTON_LEFT] = (event->motion.state & SDL_BUTTON(SDL_BUTTON_LEFT)) ? 1 : 0;
+            buttonstate[BUTTON_MIDDLE] = (event->motion.state & SDL_BUTTON(SDL_BUTTON_MIDDLE)) ? 1 : 0;
+            buttonstate[BUTTON_RIGHT] = (event->motion.state & SDL_BUTTON(SDL_BUTTON_RIGHT)) ? 1 : 0;
             motion = 1;
             return 0;
         case SDL_MOUSEBUTTONUP:
-            buttonstate[event->button.button] = 0;
+            if ( event->button.button >= 0 && event->button.button < 10 ) buttonstate[event->button.button] = 0;
             buttonup = event->button.button;
             return 0;
         case SDL_MOUSEBUTTONDOWN:
-            buttonstate[event->button.button] = 1;
+            if ( event->button.button >= 0 && event->button.button < 10 ) buttonstate[event->button.button] = 1;
             buttondown = event->button.button;
             return 0;
-        case SDL_KEYUP:
-            keystate[event->key.keysym.sym] = 0;
+        case SDL_KEYUP: {
+            SDL_Scancode sc = event->key.keysym.scancode;
+            if ( sc >= 0 && sc < SDL_NUM_SCANCODES ) keystate_map[sc] = 0;
             return 0;
-        case SDL_KEYDOWN:
-            keystate[event->key.keysym.sym] = 1;
+        }
+        case SDL_KEYDOWN: {
+            SDL_Scancode sc = event->key.keysym.scancode;
+            if ( sc >= 0 && sc < SDL_NUM_SCANCODES ) keystate_map[sc] = 1;
             return 1;
+        }
         case SDL_QUIT:
             sdl_quit = 1;
             return 0;
@@ -112,16 +116,16 @@ Enable/Disable event filtering of mouse and keyboard.
 */
 void event_enable_filter( void )
 {
-    SDL_SetEventFilter( event_filter );
+    SDL_SetEventFilter( event_filter, NULL );
     event_clear();
 }
 void event_disable_filter( void )
 {
-    SDL_SetEventFilter( 0 );
+    SDL_SetEventFilter( NULL, NULL );
 }
 void event_clear( void )
 {
-    memset( keystate, 0, sizeof( int ) * SDLK_LAST );
+    memset( keystate_map, 0, sizeof( keystate_map ) );
     memset( buttonstate, 0, sizeof( int ) * 10 );
     buttonup = buttondown = motion = 0;
 }
@@ -196,7 +200,10 @@ Check if 'key' is currently set.
 */
 int event_check_key( int key )
 {
-    return keystate[key];
+    SDL_Scancode sc = SDL_GetScancodeFromKey(key);
+    if ( sc >= 0 && sc < SDL_NUM_SCANCODES )
+        return keystate_map[sc];
+    return 0;
 }
 
 /*
@@ -217,9 +224,9 @@ Clear the SDL event key (keydown events)
 void event_clear_sdl_queue()
 {
     SDL_Event event;
-    SDL_SetEventFilter( all_filter );
+    SDL_SetEventFilter( all_filter, NULL );
     while ( SDL_PollEvent( &event ) );
-    SDL_SetEventFilter( event_filter );
+    SDL_SetEventFilter( event_filter, NULL );
 }
 
 /*

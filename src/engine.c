@@ -3040,8 +3040,8 @@ static void engine_check_events(int *reinit)
             }
         if ( SDL_PollEvent( &event ) )
         {
-            if ( event.type == SDL_KEYDOWN ) 
-            {
+            switch ( event.type ) {
+            case SDL_KEYDOWN: {
                 /* allow mirroring anywhere */
                 if (event.key.keysym.sym==SDLK_TAB)
                 {
@@ -3161,9 +3161,11 @@ static void engine_check_events(int *reinit)
                             case SDLK_7:
                             case SDLK_8:
                             case SDLK_9:
-                                keystate = SDL_GetKeyState(&numkeys);
-                                if (keystate[SDLK_x])
-                                        engine_handle_button(ID_SPLIT_1+event.key.keysym.sym-SDLK_1); 
+                                {
+                                    const Uint8 *ks = SDL_GetKeyboardState(NULL);
+                                    if ( ks[SDL_GetScancodeFromKey(SDLK_x)] )
+                                    engine_handle_button(ID_SPLIT_1+event.key.keysym.sym-SDLK_1);
+                                }
                                 break;
                             case SDLK_MINUS:
                                 if (cur_unit) cur_unit->is_guarding = !cur_unit->is_guarding;
@@ -3204,7 +3206,7 @@ static void engine_check_events(int *reinit)
                         scroll_block_keys = 0;
                     }
                     else {
-                        edit_handle_key( gui->edit, event.key.keysym.sym, event.key.keysym.mod, event.key.keysym.unicode );
+                        edit_handle_key( gui->edit, event.key.keysym.sym, event.key.keysym.mod, 0 );
 #ifdef WITH_SOUND
                         wav_play( gui->wav_edit );
 #endif
@@ -3214,6 +3216,21 @@ static void engine_check_events(int *reinit)
                 if (keypressed)
                     wav_play( gui->wav_click );
 #endif
+                break; }
+            case SDL_TEXTINPUT: {
+                /* Forward UTF-8 text input to edit control as bytes when editing */
+                if ( status == STATUS_RENAME || status == STATUS_SAVE ) {
+                    const char *txt = event.text.text;
+                    for ( size_t i = 0; i < strlen(txt); ++i ) {
+                        edit_handle_key( gui->edit, 0, 0, (unsigned char)txt[i] );
+                    }
+#ifdef WITH_SOUND
+                    wav_play( gui->wav_edit );
+#endif
+                }
+                break; }
+            default:
+                break;
             }
         }
         /* scrolling */
@@ -3392,26 +3409,19 @@ static void engine_handle_next_action( int *reinit )
             engine_set_status( STATUS_NONE );
             end_scen = 1;
             break;
-        case ACTION_SET_VMODE:
-            flags = SDL_SWSURFACE;
-            if ( action->full ) flags |= SDL_FULLSCREEN;
-            depth = SDL_VideoModeOK( action->w, action->h, 32, flags );
-            if ( depth == 0 ) {
-                fprintf( stderr, tr("Video Mode: %ix%i, Fullscreen: %i not available\n"), 
-                         action->w, action->h, action->full );
-            }
-            else {
-                /* videomode */
-                SDL_SetVideoMode( action->w, action->h, depth, flags );
-                printf(tr("Applied video mode %dx%dx%d %s\n"),
-                                        action->w, action->h, depth,
-                                        (flags&SDL_FULLSCREEN)?tr("Fullscreen"):
-                                            tr("Window"));
+        case ACTION_SET_VMODE: {
+            int rc = set_video_mode(action->w, action->h, action->full);
+            if (!rc) {
+                fprintf(stderr, tr("Video Mode: %ix%i, Fullscreen: %i not available\n"), action->w, action->h, action->full);
+            } else {
+                printf(tr("Applied video mode %dx%d %s\n"), action->w, action->h, (action->full?tr("Fullscreen"):tr("Window")));
+                /* update surface references after video mode change */
+                gui_set_surface( sdl.screen );
                 /* adjust windows */
                 gui_resize_panel();
                 gui_adjust();
                 if ( setup.type != SETUP_RUN_TITLE ) {
-                	engine_update_mapview_size();
+                    engine_update_mapview_size();
                     /* reset map pos if necessary */
                     if ( map_x + map_sw >= map_w )
                         map_x = map_w - map_sw;
@@ -3425,16 +3435,17 @@ static void engine_handle_next_action( int *reinit )
                     gui_init_minimap();
                     /* recreate screen buffer */
                     free_surf( &sc_buffer );
-                    sc_buffer = create_surf( sdl.screen->w, sdl.screen->h, SDL_SWSURFACE );
+                    sc_buffer = create_surf( sdl.screen->w, sdl.screen->h, 0 );
                 }
                 /* redraw map */
                 draw_map = 1;
                 /* set config */
                 config.width = action->w;
                 config.height = action->h;
-                config.fullscreen = (flags & SDL_FULLSCREEN)?1:0;
+                config.fullscreen = action->full ? 1 : 0;
             }
             break;
+        }
         case ACTION_SET_SPOT_MASK:
             map_set_spot_mask();
             map_set_fog( F_SPOT );
@@ -3684,14 +3695,24 @@ static void engine_update( int ms )
                     move_unit->entr = 0;
                     /* build up the image */
                     if ( !blind_cpu_turn ) {
-                        move_image = image_create( create_surf( move_unit->sel_prop->icon->w, 
-                                                                move_unit->sel_prop->icon->h, SDL_SWSURFACE ),
+                        SDL_Surface *move_canvas = SDL_CreateRGBSurfaceWithFormat(
+                                0,
+                                move_unit->sel_prop->icon->w,
+                                move_unit->sel_prop->icon->h,
+                                32,
+                                SDL_PIXELFORMAT_ARGB8888);
+                        if ( move_canvas == NULL ) {
+                            fprintf( stderr, tr("Unable to create move surface: %s\n"), SDL_GetError() );
+                            break;
+                        }
+                        move_image = image_create( move_canvas,
                                                    move_unit->sel_prop->icon_w, move_unit->sel_prop->icon_h,
                                                    sdl.screen, 0, 0 ); 
                         image_set_region( move_image, move_unit->icon_offset, 0, 
                                           move_unit->sel_prop->icon_w, move_unit->sel_prop->icon_h );
-                        SDL_FillRect( move_image->img, 0, move_unit->sel_prop->icon->format->colorkey );
-                        SDL_SetColorKey( move_image->img, SDL_SRCCOLORKEY, move_unit->sel_prop->icon->format->colorkey );
+                        SDL_SetColorKey( move_image->img, SDL_FALSE, 0 );
+                        SDL_SetSurfaceBlendMode( move_image->img, SDL_BLENDMODE_BLEND );
+                        SDL_FillRect( move_image->img, 0, SDL_MapRGBA( move_image->img->format, 0, 0, 0, 0 ) );
                         FULL_DEST( move_image->img );
                         FULL_SOURCE( move_unit->sel_prop->icon );
                         blit_surf();
@@ -4499,7 +4520,7 @@ int engine_init()
             if ( get_pixel( terrain_icons->fog, i, j ) )
                 hex_mask[j * hex_w + i] = 1;
     /* screen copy buffer */
-    sc_buffer = create_surf( sdl.screen->w, sdl.screen->h, SDL_SWSURFACE );
+    sc_buffer = create_surf( sdl.screen->w, sdl.screen->h, 0 );
     sc_type = 0;
     /* map geometry */
     map_x = map_y = 0;

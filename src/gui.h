@@ -200,6 +200,13 @@ void gui_adjust();
 
 /*
 ====================================================================
+Update surface reference for all GUI elements after video mode change.
+====================================================================
+*/
+void gui_set_surface( SDL_Surface *surf );
+
+/*
+====================================================================
 Change all GUI graphics to the one found in gfx/theme/path.
 ====================================================================
 */

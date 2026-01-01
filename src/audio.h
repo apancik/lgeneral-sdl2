@@ -19,12 +19,12 @@
 #define __AUDIO_H
 
 #ifdef WITH_SOUND
-
 /*
 ====================================================================
 Wrapper for the SDL_mixer functions.
 ====================================================================
 */
+#include <SDL_mixer.h>
 
 /*
 ====================================================================
@@ -49,7 +49,7 @@ Wave
 ====================================================================
 */
 typedef struct {
-    void        *chunk;     /* opaque pointer to Mix_Chunk; audio.c casts */
+    Mix_Chunk   *chunk;     /* SDL2_mixer chunk */
     int         channel;    /* chunk is played at this channel */
 } Wav;
 Wav* wav_load( char *fname, int channel );

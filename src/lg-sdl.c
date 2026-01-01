@@ -29,6 +29,8 @@ extern int  term_game;
 Sdl sdl;
 SDL_Cursor *empty_cursor = 0, *std_cursor = 0;
 
+/* under SDL2 we create a window and use its surface as the main screen */
+
 /* timer */
 int cur_time, last_time;
 
@@ -63,19 +65,62 @@ SDL_Surface* load_surf(const char *fname, int f)
     }
 /*    if ( !(f & SDL_HWSURFACE) ) {
 
-        SDL_SetColorKey( buf, SDL_SRCCOLORKEY, 0x0 );
+        SDL_SetColorKey( buf, SDL_TRUE, 0x0 );
         return buf;
 
     }
     new_sur = create_surf(buf->w, buf->h, f);
     SDL_BlitSurface(buf, 0, new_sur, 0);
     SDL_FreeSurface(buf);*/
-    spf = SDL_GetVideoSurface()->format;
-    new_sur = SDL_ConvertSurface( buf, spf, f );
+    if (sdl.screen)
+        spf = sdl.screen->format;
+    else
+        spf = buf->format;
+    new_sur = SDL_ConvertSurface(buf, spf, 0);
     SDL_FreeSurface( buf );
-    SDL_SetColorKey( new_sur, SDL_SRCCOLORKEY, 0x0 );
-    SDL_SetAlpha( new_sur, 0, 0 ); /* no alpha */
+    SDL_SetColorKey( new_sur, SDL_TRUE, 0x0 );
+    /* We rely on direct pixel reads (e.g. for color key detection), so keep RLE disabled. */
+    SDL_SetSurfaceRLE( new_sur, SDL_FALSE );
+    SDL_SetSurfaceBlendMode(new_sur, SDL_BLENDMODE_NONE);
+    SDL_SetSurfaceAlphaMod(new_sur, 255);
     return new_sur;
+}
+
+SDL_Surface* colorkey_to_alpha(SDL_Surface *surf, Uint32 color_key)
+{
+    if (!surf)
+        return NULL;
+
+    Uint8 r = 0, g = 0, b = 0;
+    SDL_GetRGB(color_key, surf->format, &r, &g, &b);
+
+    SDL_Surface *converted = SDL_ConvertSurfaceFormat(surf, SDL_PIXELFORMAT_ARGB8888, 0);
+    if (!converted)
+        return surf;
+    if (converted != surf)
+        SDL_FreeSurface(surf);
+    surf = converted;
+
+    color_key = SDL_MapRGB(surf->format, r, g, b);
+
+    if (SDL_MUSTLOCK(surf)) SDL_LockSurface(surf);
+    Uint8 *base = (Uint8 *)surf->pixels;
+    for (int y = 0; y < surf->h; ++y) {
+        Uint32 *row = (Uint32 *)(base + y * surf->pitch);
+        for (int x = 0; x < surf->w; ++x) {
+            Uint32 rgb = row[x] & 0x00FFFFFF;
+            if (rgb == (color_key & 0x00FFFFFF))
+                row[x] = rgb; /* alpha 0 */
+            else
+                row[x] = rgb | 0xFF000000; /* alpha 255 */
+        }
+    }
+    if (SDL_MUSTLOCK(surf)) SDL_UnlockSurface(surf);
+
+    SDL_SetColorKey(surf, SDL_FALSE, 0);
+    SDL_SetSurfaceBlendMode(surf, SDL_BLENDMODE_BLEND);
+    SDL_SetSurfaceRLE(surf, SDL_FALSE);
+    return surf;
 }
 
 /*
@@ -85,15 +130,22 @@ SDL_Surface* load_surf(const char *fname, int f)
 SDL_Surface* create_surf(int w, int h, int f)
 {
     SDL_Surface *sur;
-    SDL_PixelFormat *spf = SDL_GetVideoSurface()->format;
-    if ((sur = SDL_CreateRGBSurface(f, w, h, spf->BitsPerPixel, spf->Rmask, spf->Gmask, spf->Bmask, spf->Amask)) == 0) {
+    SDL_PixelFormat *spf = sdl.screen ? sdl.screen->format : NULL;
+    int bpp = spf ? spf->BitsPerPixel : 32;
+    Uint32 rmask = spf ? spf->Rmask : 0x00FF0000;
+    Uint32 gmask = spf ? spf->Gmask : 0x0000FF00;
+    Uint32 bmask = spf ? spf->Bmask : 0x000000FF;
+    Uint32 amask = spf ? spf->Amask : 0xFF000000;
+    if ((sur = SDL_CreateRGBSurface(0, w, h, bpp, rmask, gmask, bmask, amask)) == 0) {
         fprintf(stderr, "ERR: ssur_create: not enough memory to create surface...\n");
         exit(1);
     }
 /*    if (f & SDL_HWSURFACE && !(sur->flags & SDL_HWSURFACE))
         fprintf(stderr, "unable to create surface (%ix%ix%i) in hardware memory...\n", w, h, spf->BitsPerPixel);*/
-    SDL_SetColorKey(sur, SDL_SRCCOLORKEY, 0x0);
-    SDL_SetAlpha(sur, 0, 0); /* no alpha */
+    SDL_SetColorKey(sur, SDL_TRUE, 0x0);
+    SDL_SetSurfaceRLE( sur, SDL_FALSE );
+    SDL_SetSurfaceBlendMode(sur, SDL_BLENDMODE_NONE);
+    SDL_SetSurfaceAlphaMod(sur, 255);
     return sur;
 }
 
@@ -109,10 +161,8 @@ void free_surf( SDL_Surface **surf )
 */
 int disp_format(SDL_Surface *sur)
 {
-    if ((sur = SDL_DisplayFormat(sur)) == 0) {
-        fprintf(stderr, "ERR: ssur_displayformat: convertion failed\n");
-        return 1;
-    }
+    /* SDL2 does not provide SDL_DisplayFormat; best-effort no-op */
+    (void)sur;
     return 0;
 }
 
@@ -139,7 +189,17 @@ inline void unlock_surf(SDL_Surface *sur)
 */
 void blit_surf(void)
 {
+    if (!sdl.s.s || !sdl.d.s) return;
+    SDL_BlendMode old_mode;
+    Uint8 old_alpha;
+    if (SDL_GetSurfaceBlendMode(sdl.s.s, &old_mode) != 0) old_mode = SDL_BLENDMODE_NONE;
+    SDL_GetSurfaceAlphaMod(sdl.s.s, &old_alpha);
+    SDL_BlendMode desired = (sdl.s.s->format && sdl.s.s->format->Amask) ? SDL_BLENDMODE_BLEND : SDL_BLENDMODE_NONE;
+    SDL_SetSurfaceBlendMode(sdl.s.s, desired);
+    SDL_SetSurfaceAlphaMod(sdl.s.s, 255);
     SDL_BlitSurface(sdl.s.s, &sdl.s.r, sdl.d.s, &sdl.d.r);
+    SDL_SetSurfaceAlphaMod(sdl.s.s, old_alpha);
+    SDL_SetSurfaceBlendMode(sdl.s.s, old_mode);
 }
 
 /*
@@ -147,9 +207,16 @@ void blit_surf(void)
 */
 void alpha_blit_surf(int alpha)
 {
-    SDL_SetAlpha(sdl.s.s, SDL_SRCALPHA, alpha);
+    if (!sdl.s.s || !sdl.d.s) return;
+    SDL_BlendMode old_mode;
+    Uint8 old_alpha;
+    if (SDL_GetSurfaceBlendMode(sdl.s.s, &old_mode) != 0) old_mode = SDL_BLENDMODE_NONE;
+    SDL_GetSurfaceAlphaMod(sdl.s.s, &old_alpha);
+    SDL_SetSurfaceBlendMode(sdl.s.s, SDL_BLENDMODE_BLEND);
+    SDL_SetSurfaceAlphaMod(sdl.s.s, (Uint8)alpha);
     SDL_BlitSurface(sdl.s.s, &sdl.s.r, sdl.d.s, &sdl.d.r);
-    SDL_SetAlpha(sdl.s.s, 0, 0);
+    SDL_SetSurfaceAlphaMod(sdl.s.s, old_alpha);
+    SDL_SetSurfaceBlendMode(sdl.s.s, old_mode);
 }
 
 /*
@@ -165,7 +232,7 @@ void set_surf_clip( SDL_Surface *surf, int x, int y, int w, int h )
 {
     SDL_Rect rect = { x, y, w, h };
     if ( w == h || h == 0 )
-        SDL_SetClipRect( surf, 0 );
+        SDL_SetClipRect( surf, NULL );
     else
         SDL_SetClipRect( surf, &rect );
 }
@@ -276,7 +343,7 @@ void font_load_glyphs(Font *font, const char *fname)
 
     get_full_font_path( path, fname );
 
-    if ((new_glyphs = load_surf(path, SDL_SWSURFACE)) == 0) {
+    if ((new_glyphs = load_surf(path, 0)) == 0) {
         fprintf(stderr, tr("Cannot load new glyphs surface: %s\n"), SDL_GetError());
         exit(1);
     }
@@ -341,8 +408,8 @@ void font_load_glyphs(Font *font, const char *fname)
          * 3. blit the conserved following part.
          * 4. blit the new glyphs.
          */
-        dest = create_surf(pre_width + new_glyphs->w + post_width,
-        		   font->pic ? font->pic->h : new_glyphs->h, SDL_HWSURFACE);
+            dest = create_surf(pre_width + new_glyphs->w + post_width,
+            	   font->pic ? font->pic->h : new_glyphs->h, 0);
         if (!dest) {
             fprintf(stderr, tr("could not create font surface: %s\n"), SDL_GetError());
             exit(1);
@@ -376,7 +443,7 @@ void font_load_glyphs(Font *font, const char *fname)
         font->width += fixup;
     }
     
-    SDL_SetColorKey( font->pic, SDL_SRCCOLORKEY, transparency_key );
+    SDL_SetColorKey( font->pic, SDL_TRUE, transparency_key );
 
     SDL_FreeSurface(new_glyphs);
 #undef R_INDEX
@@ -424,7 +491,7 @@ int write_text(Font *fnt, SDL_Surface *dest, int x, int y, const char *str, int 
     int pix_len = text_width(fnt, str);
     int px = x, py = y;
     int i;
-    SDL_Surface *spf = SDL_GetVideoSurface();
+    SDL_Surface *spf = sdl.screen;
     const int * const ofs = fnt->char_offset;
 	
     /* alignment */
@@ -443,10 +510,13 @@ int write_text(Font *fnt, SDL_Surface *dest, int x, int y, const char *str, int 
     fnt->last_width = MINIMUM(pix_len, spf->w - fnt->last_x);
     fnt->last_height = MINIMUM(fnt->height, spf->h - fnt->last_y);
 
-    if (alpha != 0)
-        SDL_SetAlpha(fnt->pic, SDL_SRCALPHA, alpha);
-    else
-        SDL_SetAlpha(fnt->pic, 0, 0);
+    if (alpha != 0) {
+        SDL_SetSurfaceBlendMode(fnt->pic, SDL_BLENDMODE_BLEND);
+        SDL_SetSurfaceAlphaMod(fnt->pic, (Uint8)alpha);
+    } else {
+        SDL_SetSurfaceBlendMode(fnt->pic, SDL_BLENDMODE_NONE);
+        SDL_SetSurfaceAlphaMod(fnt->pic, 255);
+    }
     for (i = 0; i < len; i++) {
         unsigned c = (unsigned char)str[i];
         if (!fnt->keys[c]) c = '\177';
@@ -532,12 +602,12 @@ void init_sdl( int f )
         f = f & ~SDL_INIT_AUDIO;
 #endif
 
-    sdl.screen = 0;
+    sdl.window = NULL;
+    sdl.screen = NULL;
     if (SDL_Init(f) < 0) {
         fprintf(stderr, "ERR: sdl_init: %s", SDL_GetError());
         exit(1);
     }
-    SDL_EnableUNICODE(1);
     atexit(quit_sdl);
     /* create empty cursor */
     empty_cursor = create_cursor( 16, 16, 8, 8,
@@ -565,7 +635,11 @@ void init_sdl( int f )
 */
 void quit_sdl()
 {
-    if (sdl.screen) SDL_FreeSurface(sdl.screen);
+    if (sdl.screen) sdl.screen = NULL;
+    if (sdl.window) {
+        SDL_DestroyWindow(sdl.window);
+        sdl.window = NULL;
+    }
     if ( empty_cursor ) SDL_FreeCursor( empty_cursor );
     if (sdl.vmodes) free(sdl.vmodes);
     SDL_Quit();
@@ -576,41 +650,35 @@ void quit_sdl()
  * entries. */
 int get_video_modes( VideoModeInfo **vmi )
 {
-	SDL_Rect **modes = SDL_ListModes(NULL, SDL_FULLSCREEN);
-	int i, nmodes = 0;
-	int bpp = SDL_GetVideoInfo()->vfmt->BitsPerPixel;
-	
-	*vmi = NULL;
-	
-	if (modes == NULL || modes == (SDL_Rect **)-1) {
-		VideoModeInfo stdvmi[2] = {
-			{ 800, 600, 32, 0 },
-			{ 800, 600, 32, 1 }
-		};
-		fprintf(stderr,"No video modes available or specified.\n");
-		/* offer at least 800x600 */
-		nmodes = 2;
-		*vmi = calloc(nmodes,sizeof(VideoModeInfo));
-		(*vmi)[0] = stdvmi[0];
-		(*vmi)[1] = stdvmi[1];
-		return nmodes;
-	}
-	
-	/* count number of modes */
-	for (nmodes = 0; modes[nmodes]; nmodes++);
-	nmodes *= 2; /* each as window and fullscreen */
-	
-	*vmi = calloc(nmodes,sizeof(VideoModeInfo));
-	for (i = 0; i < nmodes/2; i++) {
-		VideoModeInfo *info = &((*vmi)[i*2]);
-		info->width = modes[i]->w;
-		info->height = modes[i]->h;
-		info->depth = bpp;
-		info->fullscreen = 0;
-		(*vmi)[i*2+1] = *info;
-		(*vmi)[i*2+1].fullscreen = 1;
-	}
-	return nmodes;
+    int i, nmodes = 0;
+    int num = SDL_GetNumDisplayModes(0);
+    *vmi = NULL;
+    if (num < 1) {
+        VideoModeInfo stdvmi[2] = {
+            { 800, 600, 32, 0 },
+            { 800, 600, 32, 1 }
+        };
+        nmodes = 2;
+        *vmi = calloc(nmodes, sizeof(VideoModeInfo));
+        (*vmi)[0] = stdvmi[0];
+        (*vmi)[1] = stdvmi[1];
+        return nmodes;
+    }
+    nmodes = num * 2;
+    *vmi = calloc(nmodes, sizeof(VideoModeInfo));
+    for (i = 0; i < num; i++) {
+        SDL_DisplayMode mode;
+        if (SDL_GetDisplayMode(0, i, &mode) == 0) {
+            VideoModeInfo *info = &((*vmi)[i*2]);
+            info->width = mode.w;
+            info->height = mode.h;
+            info->depth = 32;
+            info->fullscreen = 0;
+            (*vmi)[i*2+1] = *info;
+            (*vmi)[i*2+1].fullscreen = 1;
+        }
+    }
+    return nmodes;
 }
 
 /*
@@ -618,53 +686,51 @@ int get_video_modes( VideoModeInfo **vmi )
 Switch to passed video mode.
 ====================================================================
 */
+#define LG_WINDOW_TITLE "lgeneral"
 int set_video_mode( int width, int height, int fullscreen )
 {
 #ifdef SDL_DEBUG
     SDL_PixelFormat	*fmt;
 #endif
-    int depth = 32;
-    int flags = SDL_SWSURFACE;
-    /* if screen does exist check if this is mayby exactly the same resolution */
-    if ( sdl.screen ) {
-        if ( sdl.screen->w == width && sdl.screen->h == height )
-            if ( ( sdl.screen->flags & SDL_FULLSCREEN ) == fullscreen )
-                return 1;
-    }
-    /* free old screen */
-    if (sdl.screen) SDL_FreeSurface( sdl.screen );
-    sdl.screen = 0;
-    /* set video mode */
-    if ( fullscreen ) flags |= SDL_FULLSCREEN;
-    if ( ( depth = SDL_VideoModeOK( width, height, depth, flags ) ) == 0 ) {
-        fprintf( stderr, tr("Requested mode %ix%i, Fullscreen: %i unavailable, fallback to 800x600\n"),
-                 width, height, fullscreen );
-        sdl.screen = SDL_SetVideoMode( 800, 600, 16, SDL_SWSURFACE );
-    }
-    else
-        if ( ( sdl.screen = SDL_SetVideoMode( width, height, depth, flags ) ) == 0 ) {
-            fprintf(stderr, "%s", SDL_GetError());
+    /* if screen exists and matches, nothing to do */
+    if (sdl.window) {
+        int w = 0, h = 0;
+        Uint32 flags = SDL_GetWindowFlags(sdl.window);
+        int is_fullscreen = (flags & SDL_WINDOW_FULLSCREEN) != 0;
+        SDL_GetWindowSize(sdl.window, &w, &h);
+        if (w == width && h == height && is_fullscreen == fullscreen)
             return 1;
+        SDL_DestroyWindow(sdl.window);
+        sdl.window = NULL;
+        sdl.screen = NULL;
+    }
+
+    Uint32 win_flags = SDL_WINDOW_SHOWN;
+    if (fullscreen) win_flags |= SDL_WINDOW_FULLSCREEN;
+    sdl.window = SDL_CreateWindow(LG_WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, win_flags);
+    if (!sdl.window) {
+        fprintf(stderr, "%s\n", SDL_GetError());
+        /* fallback to 800x600 */
+        sdl.window = SDL_CreateWindow(LG_WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN);
+        if (!sdl.window) {
+            fprintf(stderr, "Failed to create SDL window: %s\n", SDL_GetError());
+            return 0;
         }
+    }
+    sdl.screen = SDL_GetWindowSurface(sdl.window);
 
-#ifdef SDL_DEBUG				
-    if (f & SDL_HWSURFACE && !(sdl.screen->flags & SDL_HWSURFACE))
-       	fprintf(stderr, "unable to create screen in hardware memory...\n");
-    if (f & SDL_DOUBLEBUF && !(sdl.screen->flags & SDL_DOUBLEBUF))
-        fprintf(stderr, "unable to create double buffered screen...\n");
-    if (f & SDL_FULLSCREEN && !(sdl.screen->flags & SDL_FULLSCREEN))
-        fprintf(stderr, "unable to switch to fullscreen...\n");
-
-    fmt = sdl.screen->format;
-    printf("video mode format:\n");
-    printf("Masks: R=%i, G=%i, B=%i\n", fmt->Rmask, fmt->Gmask, fmt->Bmask);
-    printf("LShft: R=%i, G=%i, B=%i\n", fmt->Rshift, fmt->Gshift, fmt->Bshift);
-    printf("RShft: R=%i, G=%i, B=%i\n", fmt->Rloss, fmt->Gloss, fmt->Bloss);
-    printf("BBP: %i\n", fmt->BitsPerPixel);
-    printf("-----\n");
-#endif    		
-		
-    return 0;
+#ifdef SDL_DEBUG
+    if (sdl.screen) {
+        fmt = sdl.screen->format;
+        printf("video mode format:\n");
+        printf("Masks: R=%i, G=%i, B=%i\n", fmt->Rmask, fmt->Gmask, fmt->Bmask);
+        printf("LShft: R=%i, G=%i, B=%i\n", fmt->Rshift, fmt->Gshift, fmt->Bshift);
+        printf("RShft: R=%i, G=%i, B=%i\n", fmt->Rloss, fmt->Gloss, fmt->Bloss);
+        printf("BBP: %i\n", fmt->BitsPerPixel);
+        printf("-----\n");
+    }
+#endif
+    return 1;
 }
 
 /*
@@ -672,16 +738,12 @@ int set_video_mode( int width, int height, int fullscreen )
 */
 void hardware_cap()
 {
-    const SDL_VideoInfo	*vi = SDL_GetVideoInfo();
-    char *ny[2] = {"No", "Yes"};
-
-    printf("video hardware capabilities:\n");
-    printf("Hardware Surfaces: %s\n", ny[vi->hw_available]);
-    printf("HW_Blit (CC, A): %s (%s, %s)\n", ny[vi->blit_hw], ny[vi->blit_hw_CC], ny[vi->blit_hw_A]);
-    printf("SW_Blit (CC, A): %s (%s, %s)\n", ny[vi->blit_sw], ny[vi->blit_sw_CC], ny[vi->blit_sw_A]);
-    printf("HW_Fill: %s\n", ny[vi->blit_fill]);
-    printf("Video Memory: %i\n", vi->video_mem);
-    printf("------\n");
+    SDL_DisplayMode mode;
+    if (SDL_GetCurrentDisplayMode(0, &mode) == 0) {
+        printf("Display current mode: %dx%d, format: %u\n", mode.w, mode.h, mode.format);
+    } else {
+        printf("Unable to query display mode: %s\n", SDL_GetError());
+    }
 }
 
 /*
@@ -689,7 +751,7 @@ void hardware_cap()
 */
 void refresh_screen(int x, int y, int w, int h)
 {
-    SDL_UpdateRect(sdl.screen, x, y, w, h);
+    if (sdl.window) SDL_UpdateWindowSurface(sdl.window);
     sdl.rect_count = 0;
 }
 
@@ -698,11 +760,7 @@ void refresh_screen(int x, int y, int w, int h)
 */
 void refresh_rects()
 {
-    if (sdl.rect_count == RECT_LIMIT)
-        SDL_UpdateRect(sdl.screen, 0, 0, sdl.screen->w, sdl.screen->h);
-    else
-        if ( sdl.rect_count > 0 )
-            SDL_UpdateRects(sdl.screen, sdl.rect_count, sdl.rect);
+    if (sdl.window) SDL_UpdateWindowSurface(sdl.window);
     sdl.rect_count = 0;
 }
 
@@ -748,8 +806,8 @@ void dim_screen(int steps, int delay, int trp)
     int per_step = trp / steps;
     int i;
     if (term_game) return;
-    buffer = create_surf(sdl.screen->w, sdl.screen->h, SDL_SWSURFACE);
-    SDL_SetColorKey(buffer, 0, 0);
+    buffer = create_surf(sdl.screen->w, sdl.screen->h, 0);
+    SDL_SetColorKey(buffer, SDL_FALSE, 0);
     FULL_DEST(buffer);
     FULL_SOURCE(sdl.screen);
     blit_surf();
@@ -782,8 +840,8 @@ void undim_screen(int steps, int delay, int trp)
     int per_step = trp / steps;
     int i;
     if (term_game) return;
-    buffer = create_surf(sdl.screen->w, sdl.screen->h, SDL_SWSURFACE);
-    SDL_SetColorKey(buffer, 0, 0);
+    buffer = create_surf(sdl.screen->w, sdl.screen->h, 0);
+    SDL_SetColorKey(buffer, SDL_FALSE, 0);
     FULL_DEST(buffer);
     FULL_SOURCE(sdl.screen);
     blit_surf();
@@ -864,7 +922,7 @@ inline void unlock_screen()
 */
 inline void flip_screen()
 {
-    SDL_Flip(sdl.screen);
+    if (sdl.window) SDL_UpdateWindowSurface(sdl.window);
 }
 
 /* cursor */

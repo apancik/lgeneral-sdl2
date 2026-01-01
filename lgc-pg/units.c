@@ -618,8 +618,8 @@ int units_convert_graphics( char *tac_icons )
     SDL_Rect srect, drect;
     PG_Shp *shp = 0;
     SDL_Surface *surf = 0;
-    Uint32 ckey = MAPRGB( CKEY_RED, CKEY_GREEN, CKEY_BLUE ); /* transparency key */
-    Uint32 mkey = MAPRGB( 0x0, 0xc3, 0xff ); /* size measurement key */
+    Uint32 ckey; /* transparency key */
+    Uint32 mkey; /* size measurement key */
     
     printf( "Unit graphics...\n" );
     /* load tac icons */
@@ -637,6 +637,8 @@ int units_convert_graphics( char *tac_icons )
         fprintf( stderr, "error creating surface: %s\n", SDL_GetError() );
         goto failure;
     }
+    ckey = MAPRGB( surf, CKEY_RED, CKEY_GREEN, CKEY_BLUE );
+    mkey = MAPRGB( surf, 0x0, 0xc3, 0xff );
     SDL_FillRect( surf, 0, ckey );
     height = 0;
     for ( i = 0; i < shp->count; i++ ) {

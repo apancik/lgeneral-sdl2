@@ -318,18 +318,18 @@ int unit_lib_load( char *fname, int main )
         unit_info_icons = calloc( 1, sizeof( Unit_Info_Icons ) );
         if ( !parser_get_value( pd, "strength_icons", &str, 0 ) ) goto parser_failure;
         sprintf( path, "units/%s", str );
-        if ( ( unit_info_icons->str = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure; 
+        if ( ( unit_info_icons->str = load_surf( path, 0 ) ) == 0 ) goto failure; 
         if ( !parser_get_int( pd, "strength_icon_width", &unit_info_icons->str_w ) ) goto parser_failure;
         if ( !parser_get_int( pd, "strength_icon_height", &unit_info_icons->str_h ) ) goto parser_failure;
         if ( !parser_get_value( pd, "attack_icon", &str, 0 ) ) goto parser_failure;
         sprintf( path, "units/%s", str );
-        if ( ( unit_info_icons->atk = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure; 
+        if ( ( unit_info_icons->atk = load_surf( path, 0 ) ) == 0 ) goto failure; 
         if ( !parser_get_value( pd, "move_icon", &str, 0 ) ) goto parser_failure;
         sprintf( path, "units/%s", str );
-        if ( ( unit_info_icons->mov = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure; 
+        if ( ( unit_info_icons->mov = load_surf( path, 0 ) ) == 0 ) goto failure; 
         if ( !parser_get_value( pd, "guard_icon", &str, 0 ) ) str = "pg_guard.bmp";
         sprintf( path, "units/%s", str );
-        if ( ( unit_info_icons->guard = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure; 
+        if ( ( unit_info_icons->guard = load_surf( path, 0 ) ) == 0 ) goto failure; 
     }
     /* icons */
     if ( !parser_get_value( pd, "icon_type", &str, 0 ) ) goto parser_failure;
@@ -458,7 +458,8 @@ int unit_lib_load( char *fname, int main )
             set_pixel( unit->icon, 0, unit->icon_h - 1, color_key );
             set_pixel( unit->icon, unit->icon_w - 1, 0, color_key );
             /* set transparency */
-            SDL_SetColorKey( unit->icon, SDL_SRCCOLORKEY, color_key );
+            SDL_SetColorKey( unit->icon, SDL_TRUE, color_key );
+            unit->icon = colorkey_to_alpha( unit->icon, color_key );
         }
         else {
             /* set size */
@@ -474,7 +475,8 @@ int unit_lib_load( char *fname, int main )
             set_pixel( unit->icon, 0, unit->icon_h - 1, color_key );
             set_pixel( unit->icon, unit->icon_w - 1, 0, color_key );
             /* set transparency */
-            SDL_SetColorKey( unit->icon, SDL_SRCCOLORKEY, color_key );
+            SDL_SetColorKey( unit->icon, SDL_TRUE, color_key );
+            unit->icon = colorkey_to_alpha( unit->icon, color_key );
             /* get format info */
             byte_size = icons->format->BytesPerPixel;
             y_offset = 0;
@@ -508,7 +510,8 @@ int unit_lib_load( char *fname, int main )
                            get_pixel( unit->icon, scale * i, scale * j ) );
         }
         /* use color key of 'big' picture */
-        SDL_SetColorKey( unit->icon_tiny, SDL_SRCCOLORKEY, color_key );
+        SDL_SetColorKey( unit->icon_tiny, SDL_TRUE, color_key );
+        unit->icon_tiny = colorkey_to_alpha( unit->icon_tiny, color_key );
         /* read sounds -- well as there are none so far ... */
 #ifdef WITH_SOUND
         if ( parser_get_value( sub, "move_sound", &str, 0 ) ) {
@@ -540,7 +543,7 @@ int unit_lib_load( char *fname, int main )
                 for ( i = 0; i < log_dot_count; i++ )
                     log_str[3 + i] = '*';
                 write_text( log_font, sdl.screen, log_x, log_y, log_str, 255 );
-                SDL_UpdateRect( sdl.screen, log_font->last_x, log_font->last_y, log_font->last_width, log_font->last_height );
+                refresh_screen( log_font->last_x, log_font->last_y, log_font->last_width, log_font->last_height );
             }
         }
     }

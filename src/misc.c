@@ -224,7 +224,7 @@ Text* create_text( struct _Font *fnt, const char *orig_str, int width )
         }
     }
 
-    if (!td.text->lines) text_add_line(&td, "", "" + 1);
+    if (!td.text->lines) text_add_line(&td, "", "");
 
     return td.text;
 }

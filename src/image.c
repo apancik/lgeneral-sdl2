@@ -20,6 +20,8 @@
 #include "lg-sdl.h"
 #include "image.h"
 
+extern Sdl sdl;
+
 /*
 ====================================================================
 Create buffer of size w,h with default postion x,y in surf.
@@ -30,14 +32,14 @@ Buffer* buffer_create( int w, int h, SDL_Surface *surf, int x, int y )
 {
     Buffer *buffer = 0;
     SDL_PixelFormat *format = 0;
-    if ( SDL_GetVideoSurface() ) 
-        format = SDL_GetVideoSurface()->format;
+    if ( sdl.screen )
+        format = sdl.screen->format;
     else {
         fprintf( stderr, "buffer_create: video display not available\n" );
         return 0;
     }
     buffer = calloc( 1, sizeof( Buffer ) );
-    buffer->buf = SDL_CreateRGBSurface( SDL_SWSURFACE, w, h, 
+    buffer->buf = SDL_CreateRGBSurface( 0, w, h,
                                            format->BitsPerPixel,
                                            format->Rmask, format->Gmask, format->Bmask,
                                            format->Amask );
@@ -46,7 +48,6 @@ Buffer* buffer_create( int w, int h, SDL_Surface *surf, int x, int y )
         free( buffer );
         return 0;
     }
-    SDL_SetColorKey( buffer->buf, 0, 0 );
     buffer->buf_rect.w = buffer->surf_rect.w = buffer->old_rect.w = w;
     buffer->buf_rect.h = buffer->surf_rect.h = buffer->old_rect.h = h;
     buffer->buf_rect.x = buffer->buf_rect.y = 0;
@@ -82,8 +83,11 @@ Get buffer from buffer->surf.
 void buffer_get( Buffer *buffer )
 {
     SDL_Rect srect = buffer->surf_rect, drect = buffer->buf_rect;
-    if ( !buffer->hide )
-        SDL_BlitSurface( buffer->surf, &srect, buffer->buf, &drect );
+    if ( !buffer->hide ) {
+        DEST( buffer->buf, drect.x, drect.y, drect.w, drect.h );
+        SOURCE( buffer->surf, srect.x, srect.y );
+        blit_surf();
+    }
 }
 
 /*
@@ -94,8 +98,11 @@ Draw buffer to buffer->surf.
 void buffer_draw( Buffer *buffer )
 {
     SDL_Rect drect = buffer->surf_rect, srect = buffer->buf_rect;
-    if ( !buffer->hide )
-        SDL_BlitSurface( buffer->buf, &srect, buffer->surf, &drect );
+    if ( !buffer->hide ) {
+        DEST( buffer->surf, drect.x, drect.y, drect.w, drect.h );
+        SOURCE( buffer->buf, srect.x, srect.y );
+        blit_surf();
+    }
 }
 
 /*
@@ -179,7 +186,7 @@ Image *image_create( SDL_Surface *img, int buf_w, int buf_h, SDL_Surface *surf, 
         free( image );
         return 0;
     }
-    SDL_SetColorKey( image->img, SDL_SRCCOLORKEY, 0x0 );
+    SDL_SetColorKey( image->img, SDL_TRUE, 0x0 );
     return image;
 }
 void image_delete( Image **image )
@@ -203,8 +210,11 @@ refreshs.
 void image_draw( Image *image )
 {
     SDL_Rect srect = image->img_rect, drect = image->bkgnd->surf_rect;
-    if ( !image->bkgnd->hide )
-        SDL_BlitSurface( image->img, &srect, image->bkgnd->surf, &drect );
+    if ( !image->bkgnd->hide ) {
+        DEST( image->bkgnd->surf, drect.x, drect.y, drect.w, drect.h );
+        SOURCE( image->img, srect.x, srect.y );
+        blit_surf();
+    }
     buffer_add_refresh_rects( image->bkgnd );
 }
 
@@ -324,8 +334,8 @@ Frame *frame_create( SDL_Surface *img, int alpha, SDL_Surface *surf, int x, int 
     int w, h;
     Frame *frame = 0;
     SDL_PixelFormat *format = 0;
-    if ( SDL_GetVideoSurface() ) 
-        format = SDL_GetVideoSurface()->format;
+    if ( sdl.screen )
+        format = sdl.screen->format;
     else {
         fprintf( stderr, "buffer_create: video display not available\n" );
         return 0;
@@ -337,37 +347,38 @@ Frame *frame_create( SDL_Surface *img, int alpha, SDL_Surface *surf, int x, int 
         goto failure;
     }
     frame->frame = img;
-    SDL_SetColorKey( frame->frame, SDL_SRCCOLORKEY, 0x0 );
+    SDL_SetColorKey( frame->frame, SDL_TRUE, 0x0 );
     w = frame->frame->w; h = frame->frame->h;
     /* contents */
-    frame->contents = SDL_CreateRGBSurface( SDL_SWSURFACE, w, h, 
+    frame->contents = SDL_CreateRGBSurface( 0, w, h,
                                             format->BitsPerPixel,
                                             format->Rmask, format->Gmask, format->Bmask,
                                             format->Amask );
     if ( frame->contents == 0 ) goto sdl_failure;
-    SDL_SetColorKey( frame->contents, SDL_SRCCOLORKEY, 0x0 );
+    SDL_SetColorKey( frame->contents, SDL_TRUE, 0x0 );
     /* shadow if any transparency  */
     frame->alpha = alpha;
     if ( alpha > 0 ) {
-        frame->shadow = SDL_CreateRGBSurface( SDL_SWSURFACE, w, h, 
+        frame->shadow = SDL_CreateRGBSurface( 0, w, h,
                                               format->BitsPerPixel,
                                               format->Rmask, format->Gmask, format->Bmask,
                                               format->Amask );
         if ( frame->shadow == 0 ) goto sdl_failure;
         SDL_FillRect( frame->shadow, 0, 0x0 );
-        SDL_SetColorKey( frame->shadow, SDL_SRCCOLORKEY, 0x0 );
+        SDL_SetColorKey( frame->shadow, SDL_TRUE, 0x0 );
         rect.x = 1; rect.y = 1; rect.w = frame->shadow->w - 2; rect.h = frame->shadow->h - 2;
         SDL_FillRect( frame->shadow, &rect, SDL_MapRGB( frame->shadow->format, 4, 4, 4 ) );
-        SDL_SetAlpha( frame->shadow, SDL_SRCALPHA, alpha );
+        SDL_SetSurfaceBlendMode(frame->shadow, SDL_BLENDMODE_BLEND);
+        SDL_SetSurfaceAlphaMod(frame->shadow, (Uint8)alpha);
     }
     /* image (empty frame per default)*/
-    empty_img = SDL_CreateRGBSurface( SDL_SWSURFACE, w, h, 
+    empty_img = SDL_CreateRGBSurface( 0, w, h,
                                  format->BitsPerPixel,
                                  format->Rmask, format->Gmask, format->Bmask,
                                  format->Amask );
     if ( empty_img == 0 ) goto sdl_failure;
     SDL_FillRect( empty_img, 0, 0x0 );
-    SDL_SetColorKey( empty_img, SDL_SRCCOLORKEY, 0x0 );
+    SDL_SetColorKey( empty_img, SDL_TRUE, 0x0 );
     if ( ( frame->img = image_create( empty_img, 0, 0, surf, x, y ) ) == 0 ) goto failure;
     frame_apply( frame );
     return frame;
@@ -400,8 +411,11 @@ void frame_hide( Frame *frame, int hide )
 void frame_draw( Frame *frame )
 {
     SDL_Rect drect = frame->img->bkgnd->surf_rect;
-    if ( !frame->img->bkgnd->hide && frame->alpha < 255 )
-        SDL_BlitSurface( frame->shadow, 0, frame->img->bkgnd->surf, &drect );
+    if ( !frame->img->bkgnd->hide && frame->alpha < 255 ) {
+        DEST( frame->img->bkgnd->surf, drect.x, drect.y, drect.w, drect.h );
+        SOURCE( frame->shadow, 0, 0 );
+        alpha_blit_surf( frame->alpha );
+    }
     image_draw( frame->img );
 }
 
@@ -413,6 +427,10 @@ Modify frame settings
 void frame_apply( Frame *frame )
 {
     SDL_FillRect( frame->img->img, 0, 0x0 );
-    SDL_BlitSurface( frame->frame, 0, frame->img->img, 0 );
-    SDL_BlitSurface( frame->contents, 0, frame->img->img, 0 );
+    DEST( frame->img->img, 0, 0, frame->frame->w, frame->frame->h );
+    SOURCE( frame->frame, 0, 0 );
+    blit_surf();
+    DEST( frame->img->img, 0, 0, frame->contents->w, frame->contents->h );
+    SOURCE( frame->contents, 0, 0 );
+    blit_surf();
 }

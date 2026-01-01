@@ -18,9 +18,11 @@
 #ifndef __CONFIG_H
 #define __CONFIG_H
 
-/* stupid name similarity */
+/* If the build system provided a generated `config.h`, include it from
+    the configured include directories. Use angle brackets so the compiler
+    doesn't pick up this local header again. */
 #ifdef HAVE_CONFIG_H
-#  include <../config.h>
+#  include <lgeneral_config.h>
 #endif
 
 /* configure struct */

@@ -219,7 +219,7 @@ int gui_load( const char *dir )
     /* frame tiles */
     sprintf( path, "../themes/%s/fr_luc.bmp", dir );
     gui->fr_luc = load_surf( path, SDL_SWSURFACE );
-    SDL_SetColorKey( gui->fr_luc, 0, 0 );
+    SDL_SetColorKey( gui->fr_luc, SDL_FALSE, 0 );
     sprintf( path, "../themes/%s/fr_llc.bmp", dir );
     gui->fr_llc = load_surf( path, SDL_SWSURFACE );
     SDL_SetColorKey( gui->fr_llc, 0, 0 );
@@ -604,6 +604,39 @@ void gui_adjust()
 	purchase_dlg_move(gui->purchase_dlg,
 			(sdl.screen->w - gui_panel_w - purchase_dlg_get_width(gui->purchase_dlg)) /2,
 			(sdl.screen->h - purchase_dlg_get_height(gui->purchase_dlg)) /2);
+}
+
+/*
+====================================================================
+Update surface reference for all GUI elements after video mode change.
+====================================================================
+*/
+void gui_set_surface( SDL_Surface *surf )
+{
+    image_set_surface( gui->cursors, surf );
+    frame_set_surface( gui->panel, surf );
+    label_set_surface( gui->label, surf );
+    label_set_surface( gui->label2, surf );
+    frame_set_surface( gui->qinfo1, surf );
+    frame_set_surface( gui->qinfo2, surf );
+    mmview_set_surface( gui->minimap, surf );
+    frame_set_surface( gui->finfo, surf );
+    frame_set_surface( gui->unit_list, surf );
+    frame_set_surface( gui->sinfo, surf );
+    group_set_surface( gui->base_menu, surf );
+    group_set_surface( gui->main_menu, surf );
+    group_set_surface( gui->load_menu, surf );
+    group_set_surface( gui->save_menu, surf );
+    group_set_surface( gui->opt_menu, surf );
+    group_set_surface( gui->unit_buttons, surf );
+    group_set_surface( gui->split_menu, surf );
+    edit_set_surface( gui->edit, surf );
+    group_set_surface( gui->confirm, surf );
+    group_set_surface( gui->deploy_window, surf );
+    select_dlg_set_surface( gui->vmode_dlg, surf );
+    sdlg_set_surface( gui->scen_dlg, surf );
+    fdlg_set_surface( gui->camp_dlg, surf );
+    purchase_dlg_set_surface( gui->purchase_dlg, surf );
 }
 
 /*
@@ -1821,10 +1854,10 @@ void gui_vmode_dlg_show()
 	
 	/* select current video mode */
 	for (i = 0; i < sdl.num_vmodes; i++)
-		if (sdl.screen->w == sdl.vmodes[i].width &&
-				sdl.screen->h == sdl.vmodes[i].height &&
-				(!!(sdl.screen->flags & SDL_FULLSCREEN)) == 
-				sdl.vmodes[i].fullscreen) {
+        if (sdl.screen->w == sdl.vmodes[i].width &&
+            sdl.screen->h == sdl.vmodes[i].height &&
+            (!!(SDL_GetWindowFlags(sdl.window) & SDL_WINDOW_FULLSCREEN)) == 
+            sdl.vmodes[i].fullscreen) {
 			lbox_select_item(gui->vmode_dlg->select_lbox,
 					list_get(gui->vmode_dlg->select_lbox->items,i));
 			break;

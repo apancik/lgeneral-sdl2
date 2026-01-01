@@ -760,6 +760,19 @@ void purchase_dlg_get_bkgnd( PurchaseDlg *pdlg)
 	lbox_get_bkgnd(pdlg->reinf_lbox);
 }
 
+/** Update surface reference for all components of purchase dialogue @pdlg.
+ * This is needed after video mode changes when sdl.screen is recreated. */
+void purchase_dlg_set_surface( PurchaseDlg *pdlg, SDL_Surface *surf )
+{
+	group_set_surface(pdlg->main_group, surf);
+	frame_set_surface(pdlg->ulimit_frame, surf);
+	lbox_set_surface(pdlg->nation_lbox, surf);
+	lbox_set_surface(pdlg->uclass_lbox, surf);
+	lbox_set_surface(pdlg->unit_lbox, surf);
+	lbox_set_surface(pdlg->trsp_lbox, surf);
+	lbox_set_surface(pdlg->reinf_lbox, surf);
+}
+
 /** Handle mouse motion for purchase dialogue @pdlg by checking all components.
  * @cx, @cy is absolute mouse position in screen. Return 1 if action has been
  * handled by some window, 0 otherwise. */

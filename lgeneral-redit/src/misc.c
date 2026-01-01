@@ -18,7 +18,7 @@ extern const char *reinf_output;
 #else /* !CMDLINE_ONLY */
 
 extern GtkWidget *window;
-const char unitdb[] = "../../src/units/pg.udb";
+const char unitdb[] = "./units/pg.udb";
 const char reinfrc[] = "reinf.rc";
 const char reinf_output[] = "../../lgc-pg/convdata/reinf";
 

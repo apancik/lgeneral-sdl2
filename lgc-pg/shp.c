@@ -213,7 +213,7 @@ static void shp_read_icon( FILE *file, SDL_Surface *surf, int y, RGB_Entry *pal,
     int bytes, flag;
     int x = 0, i, y1 = header->y1;
     Uint8 buf;
-    Uint32 ckey = MAPRGB( CKEY_RED, CKEY_GREEN, CKEY_BLUE ); /* transparent color key */
+    Uint32 ckey = MAPRGB( surf, CKEY_RED, CKEY_GREEN, CKEY_BLUE ); /* transparent color key */
     /* read */
     while ( y1 <= header->y2 ) {
         buf = 0; _fread( &buf, 1, 1, file );
@@ -235,13 +235,13 @@ static void shp_read_icon( FILE *file, SDL_Surface *surf, int y, RGB_Entry *pal,
                     /* byte row */
                     buf = 0; _fread( &buf, 1, 1, file );
                     for ( i = 0; i < bytes; i++ )
-                        set_pixel( surf, x++ + header->x1, y + y1, MAPRGB( pal[buf].r, pal[buf].g, pal[buf].b ) );
+                        set_pixel( surf, x++ + header->x1, y + y1, MAPRGB( surf, pal[buf].r, pal[buf].g, pal[buf].b ) );
                 }
                 else {
                     /* bytes != 0 && flag == 1: read next bytes uncompressed */
                     for ( i = 0; i < bytes; i++ ) {
                         buf = 0; _fread( &buf, 1, 1, file );
-                        set_pixel( surf, x++ + header->x1, y + y1, MAPRGB( pal[buf].r, pal[buf].g, pal[buf].b ) );
+                        set_pixel( surf, x++ + header->x1, y + y1, MAPRGB( surf, pal[buf].r, pal[buf].g, pal[buf].b ) );
                     }
                 }
     }
@@ -291,8 +291,9 @@ PG_Shp *shp_load( const char *fname )
     int width = 0, height = 0;
     int old_pos, pos, pal_pos;
     PG_Shp *shp = 0; 
-    SDL_PixelFormat *pf = SDL_GetVideoSurface()->format;
-    Uint32 ckey = MAPRGB( CKEY_RED, CKEY_GREEN, CKEY_BLUE ); /* transparent color key */
+    int bpp;
+    Uint32 Rmask, Gmask, Bmask, Amask;
+    Uint32 ckey;
     Icon_Header header;
     RGB_Entry pal[256];
     RGB_Entry *actual_pal = 0;
@@ -342,11 +343,25 @@ PG_Shp *shp_load( const char *fname )
         height += header.height;
         fseek( file, old_pos, SEEK_SET );
     }
-    shp->surf = SDL_CreateRGBSurface( SDL_SWSURFACE, width, height, pf->BitsPerPixel, pf->Rmask, pf->Gmask, pf->Bmask, pf->Amask );
+    if ( lgcpg_screen ) {
+        bpp = lgcpg_screen->format->BitsPerPixel;
+        Rmask = lgcpg_screen->format->Rmask;
+        Gmask = lgcpg_screen->format->Gmask;
+        Bmask = lgcpg_screen->format->Bmask;
+        Amask = lgcpg_screen->format->Amask;
+    } else {
+        bpp = 32;
+        Rmask = 0x00FF0000;
+        Gmask = 0x0000FF00;
+        Bmask = 0x000000FF;
+        Amask = 0xFF000000;
+    }
+    shp->surf = SDL_CreateRGBSurface( SDL_SWSURFACE, width, height, bpp, Rmask, Gmask, Bmask, Amask );
     if ( shp->surf == 0 ) {
         fprintf( stderr, "error creating surface: %s\n", SDL_GetError() );
         goto failure;
     }
+    ckey = MAPRGB( shp->surf, CKEY_RED, CKEY_GREEN, CKEY_BLUE );
     SDL_FillRect( shp->surf, 0, ckey );
     /* read icons */
     shp->offsets = calloc( shp->count, sizeof( int ) );

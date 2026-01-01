@@ -16,7 +16,7 @@
  ***************************************************************************/
 
 #ifdef HAVE_CONFIG_H
-#include "../config.h"
+#include "config.h"
 #endif
 
 #include <assert.h>
@@ -91,7 +91,7 @@ static void show_title()
     int dummy;
     Font *font = 0;
     SDL_Surface *back = 0;
-    if ( ( back = load_surf( "title.bmp", SDL_SWSURFACE ) ) ) {
+    if ( ( back = load_surf( "title.bmp", 0 ) ) ) {
         FULL_DEST( sdl.screen );
         FULL_SOURCE( back );
         blit_surf();
@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
     init_sdl( SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_AUDIO );
     set_video_mode( 800, 600, config.fullscreen );
     sprintf( window_name, tr("LGeneral %s"), VERSION );
-    SDL_WM_SetCaption( window_name, 0 );
+    if ( sdl.window ) SDL_SetWindowTitle( sdl.window, window_name );
     event_enable_filter();
     
     /* show lgeneral title */
