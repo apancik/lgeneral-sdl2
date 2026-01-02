@@ -2324,11 +2324,17 @@ static void engine_handle_button( int id )
         case ID_CANCEL:
             /* a confirmation window is run before an action so if cancel
                is hit all actions more recent than top_committed_action
-               will be removed. If not given, only the topmost action is
-               removed */
-            while ( actions_top() != top_committed_action ) {
-                action_remove_last();
-                if ( !top_committed_action ) break;
+               will be removed. If 'top_committed_action' is NULL we must
+               remove ALL actions. */
+            if ( top_committed_action ) {
+                while ( actions_top() != top_committed_action ) {
+                    action_remove_last();
+                }
+            }
+            else {
+                while ( actions_top() ) {
+                    action_remove_last();
+                }
             }
             /* fall through */
         case ID_OK:
