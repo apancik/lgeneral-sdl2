@@ -457,10 +457,16 @@ int units_convert_database( char *tac_icons )
     printf( "Unit data base...\n" );
     
     /* open dest file */
-    if ( single_scen )
+    if ( single_scen ) {
+        snprintf( path, MAXPATHLEN, "%s/scenarios", dest_path );
+        mkdir( path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH );
         snprintf( path, MAXPATHLEN, "%s/scenarios/%s", dest_path, target_name );
-    else
+    }
+    else {
+        snprintf( path, MAXPATHLEN, "%s/units", dest_path );
+        mkdir( path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH );
         snprintf( path, MAXPATHLEN, "%s/units/%s.udb", dest_path, target_name );
+    }
     if ( ( dest_file = fopen( path, single_scen?"ab":"wb" ) ) == 0 ) {
         fprintf( stderr, "%s: write access denied\n", path );
         goto failure;
@@ -675,6 +681,8 @@ int units_convert_graphics( char *tac_icons )
         set_pixel( surf, drect.x, drect.y + drect.h, mkey );
         height += shp->headers[i].actual_height + 2;
     }
+    snprintf( path, MAXPATHLEN, "%s/gfx/units", dest_path );
+    mkdir( path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH );
     snprintf( path, MAXPATHLEN, "%s/gfx/units/%s", dest_path, tac_icons );
     if ( SDL_SaveBMP( surf, path ) != 0 ) {
         fprintf( stderr, "%s: %s\n", path, SDL_GetError() );

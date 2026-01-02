@@ -294,6 +294,9 @@ int terrain_convert_database( void )
     
     printf( "Terrain database...\n" );
     
+    /* ensure maps directory exists */
+    snprintf( path, MAXPATHLEN, "%s/maps", dest_path );
+    mkdir( path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH );
     snprintf( path, MAXPATHLEN, "%s/maps/%s.tdb", dest_path, target_name );
     if ( ( file = fopen( path, "wb" ) ) == 0 ) {
         fprintf( stderr, "%s: access denied\n", path );

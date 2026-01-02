@@ -903,6 +903,9 @@ int scenarios_convert( int scen_id )
     printf( "Scenarios...\n" );
     
     if ( scen_id == -1 ) {
+        /* ensure scenarios parent and campaign directory exist */
+        snprintf( path, MAXPATHLEN, "%s/scenarios", dest_path );
+        mkdir( path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH );
         snprintf( path, MAXPATHLEN, "%s/scenarios/%s", dest_path, target_name );
         mkdir( path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH );
 

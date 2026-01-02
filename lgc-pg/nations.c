@@ -18,6 +18,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include "misc.h"
 #include "shp.h" 
 #include "nations.h"
@@ -84,6 +86,9 @@ int nations_convert( void )
     
     /* nation database */
     printf( "Nation database...\n" );
+    /* ensure nations directory exists */
+    snprintf( path, MAXPATHLEN, "%s/nations", dest_path );
+    mkdir( path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH );
     snprintf( path, MAXPATHLEN, "%s/nations/%s.ndb", dest_path, target_name );
     if ( ( file = fopen( path, "wb" ) ) == 0 ) {
         fprintf( stderr, "%s: access denied\n", path );
@@ -129,6 +134,9 @@ int nations_convert( void )
         SDL_BlitSurface( shp->surf, &srect, surf, &drect );
         height += shp->headers[i].actual_height;
     }
+    /* ensure gfx/flags directory exists */
+    snprintf( path, MAXPATHLEN, "%s/gfx/flags", dest_path );
+    mkdir( path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH );
     snprintf( path, MAXPATHLEN, "%s/gfx/flags/%s.bmp", dest_path, target_name );
     if ( SDL_SaveBMP( surf, path ) ) {
         fprintf( stderr, "%s: %s\n", path, SDL_GetError() );
