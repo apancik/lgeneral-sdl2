@@ -521,8 +521,8 @@ static void engine_check_menu_buttons()
         group_set_active( gui->base_menu, ID_SCEN_INFO, 0 );
     else
         group_set_active( gui->base_menu, ID_SCEN_INFO, 1 );
-    /* purchase */
-    if ( config.purchase && cur_ctrl != PLAYER_CTRL_NOBODY && (!deploy_turn  && status == STATUS_NONE ) )
+    /* purchase: only enable when there is a current player */
+    if ( config.purchase && cur_player && cur_ctrl != PLAYER_CTRL_NOBODY && (!deploy_turn  && status == STATUS_NONE ) )
         group_set_active( gui->base_menu, ID_PURCHASE, 1 );
     else
         group_set_active( gui->base_menu, ID_PURCHASE, 0 );
@@ -1125,6 +1125,8 @@ static void engine_select_player( Player *player, int skip_unit_prep )
     scroll_block = 0;
     /* render minimap */
     gui_update_minimap(1);
+    /* update menu buttons to reflect new current player immediately */
+    engine_check_menu_buttons();
 }
 
 /*
@@ -2446,12 +2448,14 @@ static void engine_handle_button( int id )
             scroll_block_keys = 1;
             break;
         case ID_PURCHASE:
-		engine_hide_game_menu();
-		engine_select_unit( 0 );
-		gui_show_purchase_window();
-		status = STATUS_PURCHASE;
-		draw_map = 1;
-		break;
+            /* don't open purchase dialog if there's no current player */
+            if (!cur_player) break;
+            engine_hide_game_menu();
+            engine_select_unit( 0 );
+            gui_show_purchase_window();
+            status = STATUS_PURCHASE;
+            draw_map = 1;
+            break;
         case ID_PURCHASE_EXIT:
 		purchase_dlg_hide( gui->purchase_dlg, 1 );
 		engine_set_status( STATUS_NONE );
@@ -2680,7 +2684,8 @@ static void engine_check_events(int *reinit)
             if ( gui_handle_button( button, cx, cy, &last_button ) ) {
                 engine_handle_button( last_button->id );
 #ifdef WITH_SOUND
-                wav_play( gui->wav_click );
+                if ( last_button && last_button->active )
+                    wav_play( gui->wav_click );
 #endif                
             } else if (mmview_handle_click(gui->minimap, button, cx, cy, &nx, &ny)) {
         	    engine_goto_xy(nx,ny);
