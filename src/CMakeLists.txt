@@ -2,9 +2,6 @@
 # lgeneral - Main game executable
 # ==============================================================================
 
-# Minimum CMake version required for features used in this directory
-cmake_minimum_required(VERSION 3.16)
-
 # ------------------------------------------------------------------------------
 # Source files
 # ------------------------------------------------------------------------------
@@ -46,7 +43,7 @@ target_include_directories(lgeneral PRIVATE
 # ------------------------------------------------------------------------------
 # Link configuration interface library
 target_link_libraries(lgeneral PRIVATE
-    lgeneral_config
+    lgeneral::config
     lgeneral::platform
 )
 if(LG_HAVE_SDL)
@@ -60,16 +57,6 @@ endif()
 if(LG_HAVE_INTL)
     target_link_libraries(lgeneral PRIVATE lgeneral::intl)
 endif()
-
-# ------------------------------------------------------------------------------
-# Output configuration
-# ------------------------------------------------------------------------------
-set_target_properties(lgeneral PROPERTIES
-    C_STANDARD 99
-    C_STANDARD_REQUIRED YES
-    C_EXTENSIONS YES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-)
 
 # ------------------------------------------------------------------------------
 # Runtime data deployment

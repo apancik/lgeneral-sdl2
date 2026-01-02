@@ -14,12 +14,15 @@
  *                                                                         *
  ***************************************************************************/
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
+#include <SDL.h>
+#include <SDL_image.h>
+#include <SDL_ttf.h>
 #include <stdio.h>
+#include <cstdlib>
 #include <list>
 #include <string>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <vector>
 
 #include "widgets.h"
@@ -27,9 +30,46 @@
 #include "data.h"
 #include "mapview.h"
 #include "gui.h"
+#include "lgeditor_config.h"
 
-std::string rcpath = DATADIR; /* editor data directory */
-std::string lgenpath = LGENDIR; /* lgeneral directory */
+static bool dir_exists(const std::string &path)
+{
+	if (path.empty())
+		return false;
+#if defined(_WIN32)
+	struct _stat info;
+	return _stat(path.c_str(), &info) == 0 && (info.st_mode & _S_IFDIR);
+#else
+	struct stat info;
+	return stat(path.c_str(), &info) == 0 && S_ISDIR(info.st_mode);
+#endif
+}
+
+static std::string resolve_path(const char *env_var,
+		const std::string &build_default,
+		const std::string &install_default)
+{
+	if (env_var)
+	{
+		const char *override_path = std::getenv(env_var);
+		if (override_path && *override_path)
+		{
+			return std::string(override_path);
+		}
+	}
+
+	if (dir_exists(build_default))
+		return build_default;
+
+	return install_default;
+}
+
+std::string rcpath = resolve_path("LGEDITOR_DATADIR",
+		LGEDITOR_DATADIR_BUILD,
+		LGEDITOR_DATADIR_INSTALL);
+std::string lgenpath = resolve_path("LGEDITOR_LGENERAL_DIR",
+		LGEDITOR_LGENERAL_DIR_BUILD,
+		LGEDITOR_LGENERAL_DIR_INSTALL);
 Data *data = NULL; /* global for anyone to access */
 GUI *gui = NULL; /* global for anyone to access */
 

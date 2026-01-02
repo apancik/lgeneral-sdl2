@@ -36,9 +36,6 @@
    `-Wmacro-redefined` warnings. Undef guards are applied broadly to
    common HAVE_* checks to reduce accidental redefinition warnings. */
 
-#if defined(HAVE_STDINT_H) && (HAVE_STDINT_H == 0)
-#  undef HAVE_STDINT_H
-#endif
 #if defined(HAVE_STRING_H) && (HAVE_STRING_H == 0)
 #  undef HAVE_STRING_H
 #endif
@@ -48,30 +45,9 @@
 #if defined(HAVE_STRCASESTR) && (HAVE_STRCASESTR == 0)
 #  undef HAVE_STRCASESTR
 #endif
-#if defined(HAVE_SNPRINTF) && (HAVE_SNPRINTF == 0)
-#  undef HAVE_SNPRINTF
-#endif
 #if defined(HAVE_SETENV) && (HAVE_SETENV == 0)
 #  undef HAVE_SETENV
 #endif
 #if defined(HAVE_PUTENV) && (HAVE_PUTENV == 0)
 #  undef HAVE_PUTENV
-#endif
-#if defined(HAVE_LANGINFO_H) && (HAVE_LANGINFO_H == 0)
-#  undef HAVE_LANGINFO_H
-#endif
-#if defined(HAVE_LANGINFO_CODESET) && (HAVE_LANGINFO_CODESET == 0)
-#  undef HAVE_LANGINFO_CODESET
-#endif
-/* Define to 1 if you have __attribute__((visibility)) support */
-#ifndef HAVE_VISIBILITY
-#cmakedefine01 HAVE_VISIBILITY
-#endif
-/* Define to 1 if O_NOATIME works */
-#ifndef HAVE_WORKING_O_NOATIME
-#cmakedefine01 HAVE_WORKING_O_NOATIME
-#endif
-/* Define to 1 if O_NOFOLLOW works */
-#ifndef HAVE_WORKING_O_NOFOLLOW
-#cmakedefine01 HAVE_WORKING_O_NOFOLLOW
 #endif

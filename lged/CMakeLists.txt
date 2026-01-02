@@ -37,7 +37,6 @@ target_include_directories(lged PRIVATE
 # ------------------------------------------------------------------------------
 target_compile_definitions(lged PRIVATE
     CMDLINE_ONLY
-    TOP_SRCDIR="."
 )
 
 # ------------------------------------------------------------------------------
@@ -49,13 +48,10 @@ if(NOT PkgConfig_FOUND)
 endif()
 
 pkg_check_modules(GTK2 REQUIRED IMPORTED_TARGET gtk+-2.0)
-if(NOT TARGET PkgConfig::GTK2)
-    message(FATAL_ERROR "GTK2 (gtk+-2.0) not found. Install GTK2 development packages or configure with -DBUILD_LGED=OFF")
-endif()
 
 # Link libraries
 target_link_libraries(lged PRIVATE
-    lgeneral_config
+    lgeneral::config
     lgeneral::platform
     PkgConfig::GTK2
 )
@@ -67,19 +63,22 @@ target_link_libraries(lged PRIVATE
 target_sources(lged PRIVATE
     "${PROJECT_SOURCE_DIR}/src/parser.c"
     "${PROJECT_SOURCE_DIR}/src/list.c"
-    "${PROJECT_SOURCE_DIR}/util/paths-linux.c"
 )
+
+
+# Add platform-specific path implementation (same as main app)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_sources(lged PRIVATE "${PROJECT_SOURCE_DIR}/util/paths-linux.c")
+else()
+    target_sources(lged PRIVATE "${PROJECT_SOURCE_DIR}/util/paths.c")
+    # Ensure the generic paths implementation is enabled when using the
+    # fallback `paths.c` so `paths_prefix()` is provided.
+    target_compile_definitions(lged PRIVATE PATHS_GENERIC)
+endif()
 
 # ------------------------------------------------------------------------------
 # Output configuration
 # ------------------------------------------------------------------------------
-set_target_properties(lged PROPERTIES
-    C_STANDARD 99
-    C_STANDARD_REQUIRED YES
-    C_EXTENSIONS YES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-)
-
 # ------------------------------------------------------------------------------
 # Installation
 # ------------------------------------------------------------------------------

@@ -34,7 +34,7 @@ target_include_directories(lgc-pg PRIVATE
 # ------------------------------------------------------------------------------
 # Link configuration interface library
 target_link_libraries(lgc-pg PRIVATE
-    lgeneral_config
+    lgeneral::config
     lgeneral::platform
 )
 
@@ -43,25 +43,17 @@ if(LG_HAVE_SDL)
 endif()
 
 # ------------------------------------------------------------------------------
-# Output configuration
-# ------------------------------------------------------------------------------
-set_target_properties(lgc-pg PROPERTIES
-    C_STANDARD 99
-    C_STANDARD_REQUIRED YES
-    C_EXTENSIONS YES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-)
-
-# ------------------------------------------------------------------------------
 # Runtime data deployment
 # ------------------------------------------------------------------------------
-# Copy runtime convdata resources to build directory
-add_custom_command(TARGET lgc-pg POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-        "${CMAKE_CURRENT_SOURCE_DIR}/convdata"
-        "${CMAKE_BINARY_DIR}/bin/convdata"
-    COMMENT "Copying convdata to build directory"
-)
+# Copy runtime convdata resources to build directory if present
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/convdata")
+    add_custom_command(TARGET lgc-pg POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/convdata"
+            "${CMAKE_BINARY_DIR}/bin/convdata"
+        COMMENT "Copying convdata to build directory"
+    )
+endif()
 
 # ------------------------------------------------------------------------------
 # Installation
@@ -112,10 +104,10 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/shptool.c")
     # Dependencies and libraries
     # ------------------------------------------------------------------------------
     # Link configuration interface library
-    target_link_libraries(shptool PRIVATE
-        lgeneral_config
-        lgeneral::platform
-    )
+        target_link_libraries(shptool PRIVATE
+            lgeneral::config
+            lgeneral::platform
+        )
     
     if(LG_HAVE_SDL)
         target_link_libraries(shptool PRIVATE lgeneral::sdl)
@@ -124,12 +116,6 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/shptool.c")
     # ------------------------------------------------------------------------------
     # Output configuration
     # ------------------------------------------------------------------------------
-    set_target_properties(shptool PROPERTIES
-        C_STANDARD 99
-        C_STANDARD_REQUIRED YES
-        C_EXTENSIONS YES
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-    )
     
     # ------------------------------------------------------------------------------
     # Installation

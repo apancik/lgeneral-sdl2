@@ -2,9 +2,6 @@
 # lgeneral-redit - GTK-based resource editor
 # ==============================================================================
 
-# Minimum CMake version required for features used in this directory
-cmake_minimum_required(VERSION 3.16)
-
 # ------------------------------------------------------------------------------
 # Source files
 # ------------------------------------------------------------------------------
@@ -40,17 +37,15 @@ target_include_directories(lgeneral-redit PRIVATE
 # Dependencies and libraries
 # ------------------------------------------------------------------------------
 # Link configuration interface library
-target_link_libraries(lgeneral-redit PRIVATE lgeneral_config)
+target_link_libraries(lgeneral-redit PRIVATE lgeneral::config)
 
 # GTK2 dependency
 if(NOT PkgConfig_FOUND)
-    message(FATAL_ERROR "PkgConfig required for GTK2 detection. Install pkg-config or configure with -DBUILD_RGEDIT=OFF")
+    message(FATAL_ERROR "PkgConfig required for GTK2 detection. Install pkg-config or configure with -DBUILD_REDIT=OFF")
 endif()
 
 pkg_check_modules(GTK2 REQUIRED IMPORTED_TARGET gtk+-2.0)
-if(NOT TARGET PkgConfig::GTK2)
-    message(FATAL_ERROR "GTK2 (gtk+-2.0) not found. Install GTK2 development packages or configure with -DBUILD_RGEDIT=OFF")
-endif()
+ 
 
 # Link libraries
 target_link_libraries(lgeneral-redit PRIVATE
@@ -78,8 +73,7 @@ endif()
 # Compile definitions
 # ------------------------------------------------------------------------------
 target_compile_definitions(lgeneral-redit PRIVATE
-    TOP_SRCDIR="."
-    PACKAGE_DATA_DIR="${PROJECT_SOURCE_DIR}"
+    PACKAGE_DATA_DIR="${CMAKE_INSTALL_FULL_DATADIR}/lgeneral"
     PACKAGE_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
 )
 
@@ -95,16 +89,6 @@ target_sources(lgeneral-redit PRIVATE
 target_compile_options(lgeneral-redit PRIVATE
     "$<$<NOT:$<C_COMPILER_ID:MSVC>>:-include${CMAKE_CURRENT_SOURCE_DIR}/src/compat.h>"
     "$<$<C_COMPILER_ID:MSVC>:/FI${CMAKE_CURRENT_SOURCE_DIR}/src/compat.h>"
-)
-
-# ------------------------------------------------------------------------------
-# Output configuration
-# ------------------------------------------------------------------------------
-set_target_properties(lgeneral-redit PROPERTIES
-    C_STANDARD 99
-    C_STANDARD_REQUIRED YES
-    C_EXTENSIONS YES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
 # ------------------------------------------------------------------------------

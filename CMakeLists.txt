@@ -4,13 +4,8 @@
 # Minimum CMake version required
 cmake_minimum_required(VERSION 3.16)
 
-# Set policies for modern CMake behavior
-if(POLICY CMP0074)
-    cmake_policy(SET CMP0074 NEW)  # find_package uses <PackageName>_ROOT variables
-endif()
-
 # Project declaration
-project(lgeneral VERSION 1.4.4 LANGUAGES C)
+project(lgeneral VERSION 1.4.4 LANGUAGES C CXX)
 
 # ==============================================================================
 # Standard includes and configuration
@@ -27,6 +22,10 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
+
 # Silence warnings about taking the address of packed struct members on Clang
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|AppleClang")
 	add_compile_options(-Wno-address-of-packed-member)
@@ -34,12 +33,7 @@ endif()
 
 # Project-level variables used in the generated config.h
 set(PACKAGE "lgeneral")
-set(TOP_SRCDIR ".")
-
-# Project-wide compile definitions
-if(UNIX)
-    add_compile_definitions(_GNU_SOURCE)
-endif()
+set(TOP_SRCDIR "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Prefer explicit control of shared vs static; downstream can override.
 option(BUILD_SHARED_LIBS "Build libraries as shared instead of static" OFF)
@@ -56,7 +50,6 @@ endif()
 include(CheckIncludeFiles)
 include(CheckFunctionExists)
 include(CheckSymbolExists)
-include(CheckLibraryExists)
 
 find_package(PkgConfig QUIET)
 
@@ -69,29 +62,6 @@ check_symbol_exists(strcasestr "string.h" HAVE_STRCASESTR)
 check_function_exists(setenv HAVE_SETENV)
 check_function_exists(putenv HAVE_PUTENV)
 
-# Additional portability and stdlib helpers (port common Autoconf checks)
-check_function_exists(snprintf HAVE_SNPRINTF)
-check_function_exists(vsnprintf HAVE_VSNPRINTF)
-check_function_exists(asprintf HAVE_ASPRINTF)
-check_function_exists(vasprintf HAVE_VASPRINTF)
-check_function_exists(newlocale HAVE_NEWLOCALE)
-check_function_exists(wprintf HAVE_WPRINTF)
-
-# Normalize checks: if a HAVE_* check was written into the cache as 0,
-# unset it so `#cmakedefine01` produces an undefined macro instead of
-# a `#define MACRO 0` which can cause redefinition warnings.
-set(_HAVE_NORMALIZE
-	HAVE_VASPRINTF
-	HAVE_ASPRINTF
-	HAVE_NEWLOCALE
-	HAVE_WPRINTF
-)
-foreach(_h IN LISTS _HAVE_NORMALIZE)
-	if(DEFINED ${_h} AND "${${_h}}" STREQUAL "0")
-		unset(${_h})
-		unset(${_h} CACHE)
-	endif()
-endforeach()
 
 # ==============================================================================
 # Configuration header generation
@@ -99,11 +69,14 @@ endforeach()
 # configure_file will process #cmakedefine and @PACKAGE@/@VERSION@
 # Generate the single configured header used by the project. Sources include
 # `lgeneral_config.h` (see `src/config.h`) so we only generate that name.
-configure_file(${CMAKE_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}/lgeneral_config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}/lgeneral_config.h)
 
 add_library(lgeneral_config INTERFACE)
 target_include_directories(lgeneral_config INTERFACE ${CMAKE_BINARY_DIR})
 target_compile_definitions(lgeneral_config INTERFACE HAVE_CONFIG_H)
+if(UNIX)
+	target_compile_definitions(lgeneral_config INTERFACE _GNU_SOURCE)
+endif()
 add_library(lgeneral::config ALIAS lgeneral_config)
 
 # Minimal platform interface for common system libs
@@ -118,7 +91,8 @@ add_library(lgeneral::platform ALIAS lgeneral_platform)
 # ==============================================================================
 option(USE_SDL "Enable SDL support (if available)" ON)
 option(BUILD_LGED "Build the GTK-based lged editor" OFF)
-option(BUILD_RGEDIT "Build the GTK-based lgeneral-redit editor" OFF)
+option(BUILD_REDIT "Build the GTK-based lgeneral-redit editor" OFF)
+option(BUILD_LGEDITOR "Build the SDL-based lgeditor map editor" OFF)
 
 # Installation options
 option(INSTALL_DATA "Install game data files" ON)
@@ -128,6 +102,8 @@ option(INSTALL_DATA "Install game data files" ON)
 # ==============================================================================
 set(LG_HAVE_SDL OFF)
 set(LG_HAVE_SDL_MIXER OFF)
+set(LG_HAVE_SDL_IMAGE OFF)
+set(LG_HAVE_SDL_TTF OFF)
 set(LG_HAVE_INTL OFF)
 
 if(USE_SDL)
@@ -136,11 +112,6 @@ if(USE_SDL)
 	if(TARGET SDL2::SDL2)
 		add_library(lgeneral_sdl INTERFACE)
 		target_link_libraries(lgeneral_sdl INTERFACE SDL2::SDL2)
-		# Propagate includes from SDL2::SDL2 target
-		get_target_property(_lg_sdl_inc SDL2::SDL2 INTERFACE_INCLUDE_DIRECTORIES)
-		if(_lg_sdl_inc)
-			target_include_directories(lgeneral_sdl INTERFACE ${_lg_sdl_inc})
-		endif()
 		add_library(lgeneral::sdl ALIAS lgeneral_sdl)
 		set(LG_HAVE_SDL ON)
 		message(STATUS "  SDL2: Found (imported target)")
@@ -205,6 +176,61 @@ elseif(USE_SDL)
 	message(STATUS "  SDL_mixer: Skipped (SDL disabled)")
 endif()
 
+if(LG_HAVE_SDL)
+	find_package(SDL2_image CONFIG QUIET)
+	if(TARGET SDL2_image::SDL2_image)
+		add_library(lgeneral_sdl_image INTERFACE)
+		target_link_libraries(lgeneral_sdl_image INTERFACE SDL2_image::SDL2_image)
+		add_library(lgeneral::sdl_image ALIAS lgeneral_sdl_image)
+		set(LG_HAVE_SDL_IMAGE ON)
+		message(STATUS "  SDL2_image: Found (CMake package)")
+	elseif(PkgConfig_FOUND)
+		pkg_check_modules(SDL2_IMAGE QUIET IMPORTED_TARGET SDL2_image)
+		if(TARGET PkgConfig::SDL2_IMAGE)
+			add_library(lgeneral_sdl_image INTERFACE)
+			target_link_libraries(lgeneral_sdl_image INTERFACE PkgConfig::SDL2_IMAGE)
+			add_library(lgeneral::sdl_image ALIAS lgeneral_sdl_image)
+			set(LG_HAVE_SDL_IMAGE ON)
+			message(STATUS "  SDL2_image: Found (pkg-config)")
+		elseif(DEFINED SDL2_IMAGE_LIBRARIES AND SDL2_IMAGE_LIBRARIES)
+			add_library(lgeneral_sdl_image INTERFACE)
+			target_include_directories(lgeneral_sdl_image INTERFACE ${SDL2_IMAGE_INCLUDE_DIRS})
+			target_link_libraries(lgeneral_sdl_image INTERFACE ${SDL2_IMAGE_LIBRARIES})
+			add_library(lgeneral::sdl_image ALIAS lgeneral_sdl_image)
+			set(LG_HAVE_SDL_IMAGE ON)
+			message(STATUS "  SDL2_image: Found (pkg-config legacy variables)")
+		endif()
+	endif()
+
+	find_package(SDL2_ttf CONFIG QUIET)
+	if(TARGET SDL2_ttf::SDL2_ttf)
+		add_library(lgeneral_sdl_ttf INTERFACE)
+		target_link_libraries(lgeneral_sdl_ttf INTERFACE SDL2_ttf::SDL2_ttf)
+		add_library(lgeneral::sdl_ttf ALIAS lgeneral_sdl_ttf)
+		set(LG_HAVE_SDL_TTF ON)
+		message(STATUS "  SDL2_ttf: Found (CMake package)")
+	elseif(PkgConfig_FOUND)
+		pkg_check_modules(SDL2_TTF QUIET IMPORTED_TARGET SDL2_ttf)
+		if(TARGET PkgConfig::SDL2_TTF)
+			add_library(lgeneral_sdl_ttf INTERFACE)
+			target_link_libraries(lgeneral_sdl_ttf INTERFACE PkgConfig::SDL2_TTF)
+			add_library(lgeneral::sdl_ttf ALIAS lgeneral_sdl_ttf)
+			set(LG_HAVE_SDL_TTF ON)
+			message(STATUS "  SDL2_ttf: Found (pkg-config)")
+		elseif(DEFINED SDL2_TTF_LIBRARIES AND SDL2_TTF_LIBRARIES)
+			add_library(lgeneral_sdl_ttf INTERFACE)
+			target_include_directories(lgeneral_sdl_ttf INTERFACE ${SDL2_TTF_INCLUDE_DIRS})
+			target_link_libraries(lgeneral_sdl_ttf INTERFACE ${SDL2_TTF_LIBRARIES})
+			add_library(lgeneral::sdl_ttf ALIAS lgeneral_sdl_ttf)
+			set(LG_HAVE_SDL_TTF ON)
+			message(STATUS "  SDL2_ttf: Found (pkg-config legacy variables)")
+		endif()
+	endif()
+elseif(USE_SDL)
+	message(STATUS "  SDL2_image: Skipped (SDL disabled)")
+	message(STATUS "  SDL2_ttf:   Skipped (SDL disabled)")
+endif()
+
 if(PkgConfig_FOUND AND NOT TARGET lgeneral_intl)
 	pkg_check_modules(GETTEXT QUIET IMPORTED_TARGET libintl)
 	if(TARGET PkgConfig::GETTEXT)
@@ -245,10 +271,16 @@ else()
 	message(STATUS "Skipping lged (GTK editor). Enable with -DBUILD_LGED=ON")
 endif()
 
-if(BUILD_RGEDIT)
+if(BUILD_REDIT)
 	add_subdirectory(lgeneral-redit)
 else()
-	message(STATUS "Skipping lgeneral-redit (GTK editor). Enable with -DBUILD_RGEDIT=ON")
+	message(STATUS "Skipping lgeneral-redit (GTK editor). Enable with -DBUILD_REDIT=ON")
+endif()
+
+if(BUILD_LGEDITOR)
+	add_subdirectory(lgeditor)
+else()
+	message(STATUS "Skipping lgeditor (SDL editor). Enable with -DBUILD_LGEDITOR=ON")
 endif()
 
 # ==============================================================================
@@ -261,9 +293,12 @@ message(STATUS "========================================")
 message(STATUS "  SDL requested:     ${USE_SDL}")
 message(STATUS "  SDL available:     ${LG_HAVE_SDL}")
 message(STATUS "  SDL_mixer audio:   ${LG_HAVE_SDL_MIXER}")
+message(STATUS "  SDL_image:         ${LG_HAVE_SDL_IMAGE}")
+message(STATUS "  SDL_ttf:           ${LG_HAVE_SDL_TTF}")
 message(STATUS "  libintl:           ${LG_HAVE_INTL}")
 message(STATUS "  Build lged:        ${BUILD_LGED}")
-message(STATUS "  Build redit:       ${BUILD_RGEDIT}")
+message(STATUS "  Build redit:       ${BUILD_REDIT}")
+message(STATUS "  Build lgeditor:    ${BUILD_LGEDITOR}")
 message(STATUS "  Install data:      ${INSTALL_DATA}")
 message(STATUS "  Install prefix:    ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "  Build type:        ${CMAKE_BUILD_TYPE}")
