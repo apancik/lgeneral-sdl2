@@ -1,0 +1,11 @@
+0.3:
+- added small help on program start (2017/08/27 MS)
+- allow adding transporters to ground units (2017/08/27 MS)
+- use = and & as alternative parser tokens (2017/08/26 MS)
+
+0.2:
+- units and flags can be changed as well (2017/07/27 MS)
+- default scenario info added that can be changed by text editor (2017/07/27 MS)
+
+0.1:
+- initial public release
