@@ -315,6 +315,7 @@ static int unit_attack( Unit *unit, Unit *target, int type, int real, int force_
         /* cost ammo */
         if ( config.supply ) {
             //if (DICE(10)<=target_old_str)
+            if ( unit->cur_ammo > 0 )
                 unit->cur_ammo--;
             if ( unit_check_attack( target, unit, UNIT_PASSIVE_ATTACK ) && target->cur_ammo > 0 )
                 //if (DICE(10)<=unit_old_str)
