@@ -46,6 +46,9 @@ endif()
 # Output configuration
 # ------------------------------------------------------------------------------
 set_target_properties(lgc-pg PROPERTIES
+    C_STANDARD 99
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS YES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
@@ -122,6 +125,9 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/shptool.c")
     # Output configuration
     # ------------------------------------------------------------------------------
     set_target_properties(shptool PROPERTIES
+        C_STANDARD 99
+        C_STANDARD_REQUIRED YES
+        C_EXTENSIONS YES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     )
     

@@ -74,6 +74,9 @@ target_sources(lged PRIVATE
 # Output configuration
 # ------------------------------------------------------------------------------
 set_target_properties(lged PROPERTIES
+    C_STANDARD 99
+    C_STANDARD_REQUIRED YES
+    C_EXTENSIONS YES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 

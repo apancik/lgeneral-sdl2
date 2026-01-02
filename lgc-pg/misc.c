@@ -27,27 +27,27 @@ extern char *source_path;
 extern char *dest_path;
 
 /* compares to strings and returns true if their first strlen(str1) chars are equal */
-inline int equal_str( char *str1, char *str2 )
+int equal_str( char *str1, char *str2 )
 {
     if ( strlen( str1 ) != strlen( str2 ) ) return 0;
     return ( !strncmp( str1, str2, strlen( str1 ) ) );
 }
 
 /* set delay to ms milliseconds */
-inline void set_delay( Delay *delay, int ms )
+void set_delay( Delay *delay, int ms )
 {
     delay->limit = ms;
     delay->cur = 0;
 }
 
 /* reset delay ( cur = 0 )*/
-inline void reset_delay( Delay *delay )
+void reset_delay( Delay *delay )
 {
     delay->cur = 0;
 }
 
 /* check if times out and reset */
-inline int timed_out( Delay *delay, int ms )
+int timed_out( Delay *delay, int ms )
 {
     delay->cur += ms;
     if ( delay->cur >= delay->limit ) {
@@ -60,7 +60,7 @@ inline int timed_out( Delay *delay, int ms )
 }
 
 
-inline void goto_tile( int *x, int *y, int d )
+static void goto_tile( int *x, int *y, int d )
 {
     /*  0 -up, clockwise, 5 - left up */
     switch ( d ) {
