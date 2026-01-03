@@ -2401,7 +2401,7 @@ static void engine_handle_button( int id )
             if ( y + gui->split_menu->frame->img->img->h >= sdl.screen->h )
                 y = sdl.screen->h - gui->split_menu->frame->img->img->h;
             if ( x + gui->split_menu->frame->img->img->w >= sdl.screen->w - gui_panel_w )
-                x = sdl.screen->h - gui->split_menu->frame->img->img->w - gui_panel_w;
+                x = sdl.screen->w - gui->split_menu->frame->img->img->w - gui_panel_w;
             group_move( gui->split_menu, x, y );
             group_hide( gui->split_menu, 0 );
             break;
@@ -4578,7 +4578,7 @@ void engine_shutdown()
     modify_fog = 0;
     cur_player = 0; cur_ctrl = 0;
     cur_unit = cur_target = cur_atk = cur_def = move_unit = surp_unit = deploy_unit = surrender_unit = 0;
-    memset( merge_units, 0, sizeof( int ) * MAP_MERGE_UNIT_LIMIT );
+    memset( merge_units, 0, sizeof(merge_units) );
     merge_unit_count = 0;
     engine_clear_backup();
     scroll_hori = scroll_vert = 0;
