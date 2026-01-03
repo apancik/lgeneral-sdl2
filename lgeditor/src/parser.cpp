@@ -313,7 +313,7 @@ static PData* parser_parse_entry( ParserState *st )
     
     /* get name */
     if ( st->tok != PARSER_STRING ) {
-        sprintf( parser_sub_error, tr("parse error before '%s'"), st->tokbuf );
+        snprintf(parser_sub_error, sizeof(parser_sub_error), tr("parse error before '%s'"), st->tokbuf );
         return 0;
     }
     pd = parser_create_pdata(strdup(st->tokbuf), 0, st->lineno, st->ctd);
@@ -337,7 +337,7 @@ static PData* parser_parse_entry( ParserState *st )
                 parser_read_token(st);
             } else {
 parse_error:
-                sprintf( parser_sub_error, tr("parse error before '%s'"), st->tokbuf );
+                snprintf(parser_sub_error, sizeof(parser_sub_error), tr("parse error before '%s'"), st->tokbuf );
                 goto failure;
             }
             break;
@@ -359,7 +359,7 @@ parse_error:
             }
             /* fall through */
         default:
-            sprintf( parser_sub_error, tr("parse error before '%s'"), st->tokbuf );
+            snprintf(parser_sub_error, sizeof(parser_sub_error), tr("parse error before '%s'"), st->tokbuf );
             goto failure;
     }
     return pd;
@@ -489,13 +489,13 @@ static int parser_read_file_compact( ParserState *st, PData *section )
             default:
                 /* check name */
                 if ( ( cur = strchr( line, entryToken1 ) ) == 0 ) {
-                	if ( ( cur = strchr( line, entryToken2 ) ) == 0 ) {
-                		sprintf( parser_sub_error,
-                				tr("parse error: use '%c' or '%c' for assignment or '<' for section"),
-                				entryToken1, entryToken2 );
-                		return 0;
-                	} else
-                		useNewTokens = 1;
+                    if ( ( cur = strchr( line, entryToken2 ) ) == 0 ) {
+                        snprintf(parser_sub_error, sizeof(parser_sub_error),
+                                  tr("parse error: use '%c' or '%c' for assignment or '<' for section"),
+                                  entryToken1, entryToken2 );
+                        return 0;
+                    } else
+                        useNewTokens = 1;
                 }
                 cur[0] = 0; cur++;
                 /* read values as subsection */
@@ -518,7 +518,7 @@ PData* parser_read_file( const char *tree_name, const char *fname )
     PData *top = 0;
     /* open file */
     if ( ( state.file = fopen( fname, "rb" ) ) == 0 ) {
-        sprintf( parser_error, tr("%s: file not found"), fname );
+        snprintf(parser_error, sizeof(parser_error), tr("%s: file not found"), fname );
         return 0;
     }
     /* create common tree data */
@@ -650,7 +650,7 @@ int parser_get_pdata  ( PData *pd, const char *name, PData  **result )
         ListIterator it;
         sub = (char *)list_next( path );
         if ( !pd_next->entries ) {
-            sprintf( parser_sub_error, tr("%s: no subtrees"), pd_next->name );
+            snprintf(parser_sub_error, sizeof(parser_sub_error), tr("%s: no subtrees"), pd_next->name );
             goto failure;
         }
         it = list_iterator( pd_next->entries ); found = 0;
@@ -661,7 +661,7 @@ int parser_get_pdata  ( PData *pd, const char *name, PData  **result )
                 break;
             }
         if ( !found ) {
-            sprintf( parser_sub_error, tr("%s: subtree '%s' not found"), pd_next->name, sub );
+            snprintf(parser_sub_error, sizeof(parser_sub_error), tr("%s: subtree '%s' not found"), pd_next->name, sub );
             goto failure;
         }
     }
@@ -669,7 +669,7 @@ int parser_get_pdata  ( PData *pd, const char *name, PData  **result )
     *result = pd_next;
     return 1;
 failure:
-    sprintf( parser_error, "parser_get_pdata: %s/%s: %s", pd->name, name, parser_sub_error );
+    snprintf(parser_error, sizeof(parser_error), "parser_get_pdata: %s/%s: %s", pd->name, name, parser_sub_error );
     list_delete( path );
     *result = 0;
     return 0;
@@ -679,12 +679,12 @@ int parser_get_entries( PData *pd, const char *name, MyList   **result )
     PData *entry;
     *result = 0;
     if ( !parser_get_pdata( pd, name, &entry ) ) {
-        sprintf( parser_sub_error, "parser_get_entries:\n %s", parser_error );
+        snprintf(parser_sub_error, sizeof(parser_sub_error), "parser_get_entries:\n %s", parser_error );
         strcpy( parser_error, parser_sub_error );
         return 0;
     }
     if ( !entry->entries || entry->entries->count == 0 ) {
-        sprintf( parser_error, tr("parser_get_entries: %s/%s: no subtrees"), pd->name, name );
+        snprintf(parser_error, sizeof(parser_error), tr("parser_get_entries: %s/%s: no subtrees"), pd->name, name );
         return 0;
     }
     *result = entry->entries;
@@ -695,12 +695,12 @@ int parser_get_values ( PData *pd, const char *name, MyList   **result )
     PData *entry;
     *result = 0;
     if ( !parser_get_pdata( pd, name, &entry ) ) {
-        sprintf( parser_sub_error, "parser_get_values:\n %s", parser_error );
+        snprintf(parser_sub_error, sizeof(parser_sub_error), "parser_get_values:\n %s", parser_error );
         strcpy( parser_error, parser_sub_error );
         return 0;
     }
     if ( !entry->values || entry->values->count == 0 ) {
-        sprintf( parser_error, tr("parser_get_values: %s/%s: no values"), pd->name, name );
+        snprintf(parser_error, sizeof(parser_error), tr("parser_get_values: %s/%s: no values"), pd->name, name );
         return 0;
     }
     *result = entry->values;
@@ -710,12 +710,12 @@ int parser_get_value  ( PData *pd, const char *name, char   **result, int index 
 {
     MyList *values;
     if ( !parser_get_values( pd, name, &values ) ) {
-        sprintf( parser_sub_error, "parser_get_value:\n %s", parser_error );
+        snprintf(parser_sub_error, sizeof(parser_sub_error), "parser_get_value:\n %s", parser_error );
         strcpy( parser_error, parser_sub_error );
         return 0;
     }
     if ( index >= values->count ) {
-        sprintf( parser_error, tr("parser_get_value: %s/%s: index %i out of range (%i elements)"), 
+        snprintf(parser_error, sizeof(parser_error), tr("parser_get_value: %s/%s: index %i out of range (%i elements)"), 
                  pd->name, name, index, values->count );
         return 0;
     }
@@ -726,7 +726,7 @@ int parser_get_int    ( PData *pd, const char *name, int     *result )
 {
     char *value;
     if ( !parser_get_value( pd, name, &value, 0 ) ) {
-        sprintf( parser_sub_error, "parser_get_int:\n %s", parser_error );
+        snprintf(parser_sub_error, sizeof(parser_sub_error), "parser_get_int:\n %s", parser_error );
         strcpy( parser_error, parser_sub_error );
         return 0;
     }
@@ -737,7 +737,7 @@ int parser_get_double ( PData *pd, const char *name, double  *result )
 {
     char *value;
     if ( !parser_get_value( pd, name, &value, 0 ) ) {
-        sprintf( parser_sub_error, "parser_get_double:\n %s", parser_error );
+        snprintf(parser_sub_error, sizeof(parser_sub_error), "parser_get_double:\n %s", parser_error );
         strcpy( parser_error, parser_sub_error );
         return 0;
     }
@@ -748,7 +748,7 @@ int parser_get_string ( PData *pd, const char *name, char   **result )
 {
     char *value;
     if ( !parser_get_value( pd, name, &value, 0 ) ) {
-        sprintf( parser_sub_error, "parser_get_string:\n %s", parser_error );
+        snprintf(parser_sub_error, sizeof(parser_sub_error), "parser_get_string:\n %s", parser_error );
         strcpy( parser_error, parser_sub_error );
         return 0;
     }
@@ -766,7 +766,7 @@ int parser_get_localized_string ( PData *pd, const char *name, const char *domai
 {
     char *value;
     if ( !parser_get_value( pd, name, &value, 0 ) ) {
-        sprintf( parser_sub_error, "parser_get_string:\n %s", parser_error );
+        snprintf(parser_sub_error, sizeof(parser_sub_error), "parser_get_string:\n %s", parser_error );
         strcpy( parser_error, parser_sub_error );
         return 0;
     }

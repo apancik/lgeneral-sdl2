@@ -73,7 +73,7 @@ int nations_load( char *fname )
     char path[512];
     char *str;
     char *domain = 0;
-    sprintf( path, "%s/nations/%s", get_gamedir(), fname );
+    snprintf(path, sizeof(path), "%s/nations/%s", get_gamedir(), fname );
     if ( ( pd = parser_read_file( fname, path ) ) == 0 ) goto parser_failure;
     //domain = determine_domain(pd, fname);
     //locale_load_domain(domain, 0/*FIXME*/);
@@ -82,7 +82,7 @@ int nations_load( char *fname )
     if ( !parser_get_int( pd, "icon_height", &nation_flag_height ) ) goto parser_failure;
     /* icons */
     if ( !parser_get_value( pd, "icons", &str, 0 ) ) goto parser_failure;
-    sprintf( path, "flags/%s", str );
+    snprintf(path, sizeof(path), "flags/%s", str );
     if ( ( nation_flags = load_surf( path,  SDL_SWSURFACE ) ) == 0 ) {
         fprintf( stderr, "%s: %s\n", path, SDL_GetError() );
         goto failure;
@@ -173,7 +173,7 @@ int terrain_load( char *fname )
     char path[512];
     char *str;
     char *domain = 0;
-    sprintf( path, "%s/maps/%s", get_gamedir(), fname );
+    snprintf(path, sizeof(path), "%s/maps/%s", get_gamedir(), fname );
     if ( ( pd = parser_read_file( fname, path ) ) == 0 ) goto parser_failure;
     //domain = determine_domain(pd, fname);
     //locale_load_domain(domain, 0/*FIXME*/);
@@ -211,14 +211,14 @@ int terrain_load( char *fname )
            point towards the image of weather_type 0 */
         terrain_types[i].images = (SDL_Surface**)calloc( weather_type_count, sizeof( SDL_Surface* ) );
         for ( j = 0; j < weather_type_count; j++ ) {
-            sprintf( path, "image/%s", weather_types[j].id );
+            snprintf(path, sizeof(path), "image/%s", weather_types[j].id );
             if ( !parser_get_value( sub, path, &str, 0 ) ) goto parser_failure;
             if ( strcmp( "default", str ) == 0 && j > 0 ) {
                 /* just a pointer */
                 terrain_types[i].images[j] = terrain_types[i].images[0];
             }
             else {
-                sprintf( path, "terrain/%s", str );
+                snprintf(path, sizeof(path), "terrain/%s", str );
                 if ( ( terrain_types[i].images[j] = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto parser_failure;
                 SDL_SetColorKey( terrain_types[i].images[j], SDL_TRUE, 0x00000000);
             }
@@ -508,8 +508,8 @@ int unit_lib_load(const char *fname, int main )
         main = 0;
     }
     /* parse file */
-    sprintf( path, "%s/units/%s", get_gamedir(), fname );
-    sprintf( log_str, tr("  Parsing '%s'"), fname );
+    snprintf(path, sizeof(path), "%s/units/%s", get_gamedir(), fname );
+    snprintf(log_str, sizeof(log_str), tr("  Parsing '%s'"), fname );
     if ( ( pd = parser_read_file( fname, path ) ) == 0 ) goto parser_failure;
     /* if main read target types & co */
     if ( main ) {
@@ -565,20 +565,20 @@ int unit_lib_load(const char *fname, int main )
         /* unit map tile icons */
         unit_info_icons = (Unit_Info_Icons*)calloc( 1, sizeof( Unit_Info_Icons ) );
         if ( !parser_get_value( pd, "strength_icons", &str, 0 ) ) goto parser_failure;
-        sprintf( path, "units/%s", str );
+        snprintf(path, sizeof(path), "units/%s", str );
         if ( ( unit_info_icons->str = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure;
         if ( !parser_get_int( pd, "strength_icon_width", &unit_info_icons->str_w ) ) goto parser_failure;
         if ( !parser_get_int( pd, "strength_icon_height", &unit_info_icons->str_h ) ) goto parser_failure;
         if ( !parser_get_value( pd, "attack_icon", &str, 0 ) ) goto parser_failure;
-        sprintf( path, "units/%s", str );
+        snprintf(path, sizeof(path), "units/%s", str );
         if ( ( unit_info_icons->atk = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure;
         if ( !parser_get_value( pd, "move_icon", &str, 0 ) ) goto parser_failure;
-        sprintf( path, "units/%s", str );
+        snprintf(path, sizeof(path), "units/%s", str );
         if ( ( unit_info_icons->mov = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure;
         if ( !parser_get_value( pd, "guard_icon", &str, 0 ) )
-                sprintf( path, "units/%s", str );
+            snprintf(path, sizeof(path), "units/%s", str );
         else
-        	sprintf( path, "units/%s", "pg_guard.bmp" );
+        	snprintf(path, sizeof(path), "units/%s", "pg_guard.bmp" );
         if ( ( unit_info_icons->guard = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure;
     }
     /* icons */
@@ -590,7 +590,7 @@ int unit_lib_load(const char *fname, int main )
     else
         icon_type = UNIT_ICON_ALL_DIRS;
     if ( !parser_get_value( pd, "icons", &str, 0 ) ) goto parser_failure;
-    sprintf( path, "units/%s", str );
+    snprintf(path, sizeof(path), "units/%s", str );
     if ( ( icons = load_surf( path, SDL_SWSURFACE ) ) == 0 ) goto failure;
     /* unit lib entries */
     if ( !parser_get_entries( pd, "unit_lib", &entries ) ) goto parser_failure;
