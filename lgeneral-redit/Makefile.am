@@ -1,7 +1,0 @@
-SUBDIRS = src
-
-EXTRA_DIST = \
-	autogen.sh \
-	README INSTALL COPYING TODO AUTHORS \
-	editor.glade README
-
