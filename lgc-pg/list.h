@@ -32,12 +32,13 @@ typedef struct _List_Entry {
     struct _List_Entry      *prev;
     void                    *item;
 } List_Entry;
+typedef void (*list_callback)(void *);
 typedef struct {
     int             auto_delete;
     int             count;
     List_Entry      head;
     List_Entry      tail;
-    void            (*callback)(void*);
+    list_callback   callback;
     List_Entry      *cur_entry;
 } List;
 
@@ -51,8 +52,8 @@ Return Value: List pointer
 ====================================================================
 */
 enum { LIST_NO_AUTO_DELETE = 0, LIST_AUTO_DELETE };
-enum { LIST_NO_CALLBACK = 0 };
-List *list_create( int auto_delete, void (*callback)(void*) );
+#define LIST_NO_CALLBACK ((list_callback)0)
+List *list_create( int auto_delete, list_callback callback );
 /*
 ====================================================================
 Delete list and entries.
