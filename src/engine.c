@@ -3428,6 +3428,16 @@ static void engine_handle_next_action( int *reinit )
                 printf(tr("Applied video mode %dx%d %s\n"), action->w, action->h, (action->full?tr("Fullscreen"):tr("Window")));
                 /* update surface references after video mode change */
                 gui_set_surface( sdl.screen );
+                /* update any global animations/images that are not
+                 * managed by the GUI so they reference the new
+                 * window surface. */
+                if ( terrain_icons ) {
+                    if ( terrain_icons->cross ) anim_set_surface( terrain_icons->cross, sdl.screen );
+                    if ( terrain_icons->expl1 ) anim_set_surface( terrain_icons->expl1, sdl.screen );
+                    if ( terrain_icons->expl2 ) anim_set_surface( terrain_icons->expl2, sdl.screen );
+                }
+                /* retarget transient/global images not managed by GUI */
+                if ( move_image ) image_set_surface( move_image, sdl.screen );
                 /* adjust windows */
                 gui_resize_panel();
                 gui_adjust();
