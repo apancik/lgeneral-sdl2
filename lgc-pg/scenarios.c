@@ -417,24 +417,33 @@ void scen_create_pg_weather( FILE *dest_file, int scen_id, FILE *scen_file, int 
         "ffffffffffsooofffffoosos",
         "ffffffroforofff"
     };
-    int i, wlen = strlen(weathers[scen_id]);
+    int i;
+    int nwe = sizeof(weathers)/sizeof(weathers[0]);
+    int wlen = 0;
     char w[32];
-    if (strlen(weathers[scen_id])>0&&strlen(weathers[scen_id])!=turns)
-        fprintf(stderr,"ERROR: scen %d: mismatch in length of weather (%d) and turn number (%d)\n",
-                scen_id,wlen,turns);
+
+    if (scen_id < 0 || scen_id >= nwe) {
+        fprintf(stderr, "ERROR: scen %d: invalid scen_id, using 0\n", scen_id);
+        scen_id = 0;
+    }
+    wlen = strlen(weathers[scen_id]);
+    if (wlen > 0 && wlen != turns)
+        fprintf(stderr, "ERROR: scen %d: mismatch in length of weather (%d) and turn number (%d)\n",
+                scen_id, wlen, turns);
     /* write weather */
     fprintf( dest_file, "weather=" );
     i = 0;
     while ( i < turns ) {
-        if (weathers[0]==0)
-            strcpy(w,"fair");
-        else
-        {
-            w[0] = weathers[scen_id][i]; w[1] = 0;
-                 if (w[0]=='f') strcpy(w,"fair");
-            else if (w[0]=='o') strcpy(w,"clouds");
-            else if (w[0]=='R') strcpy(w,"rain");
-            else if (w[0]=='S') strcpy(w,"snow");
+        if (wlen == 0) {
+            fprintf(stderr, "DEBUG: scen %d: empty weather entry, defaulting to 'fair'\n", scen_id);
+            strcpy(w, "fair");
+        } else {            
+            char c = (i < wlen) ? weathers[scen_id][i] : 'f';
+            if (c == 'f') strcpy(w, "fair");
+            else if (c == 'o') strcpy(w, "clouds");
+            else if (c == 'R') strcpy(w, "rain");
+            else if (c == 'S') strcpy(w, "snow");
+            else strcpy(w, "fair");
         }
         fprintf( dest_file, "%s", w );
         if ( i < turns - 1 )
