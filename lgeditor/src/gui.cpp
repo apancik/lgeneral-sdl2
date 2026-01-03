@@ -194,9 +194,8 @@ GUI::~GUI() {
 void GUI::run() {
 	SDL_Event ev;
 
-	w1->draw();
 	while (!GUI::leave) {
-		if (SDL_PollEvent(&ev)) {
+		while (SDL_PollEvent(&ev)) {
 			if (ev.type == SDL_QUIT)
 				GUI::leave = true;
 			else
@@ -219,10 +218,15 @@ void GUI::run() {
 					gui->mv->render();
 				}
 			}
-			SDL_RenderPresent(mrc);
 		}
-		SDL_Delay(20);
-		SDL_FlushEvent(SDL_MOUSEMOTION); /* prevent event loop from dying */
+
+		/* redraw full UI every frame to avoid losing backbuffer on some renderers */
+		SDL_SetRenderDrawColor(mrc,0,0,0,255);
+		SDL_RenderClear(mrc);
+		w1->draw();
+		SDL_RenderPresent(mrc);
+
+		SDL_Delay(16);
 	}
 }
 
