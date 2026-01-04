@@ -694,7 +694,7 @@ int scen_load( const char *fname )
        if ( !parser_get_value( sub, "name", &str,0) )
            unit_set_generic_name( &unit_base, unit_ref + 1, unit_prop->name );
        else
-           strcpy_lt( unit_base.name, str, 31 );
+           strcpy_lt( unit_base.name, str, sizeof unit_base.name - 1 );
         /* delay */
         unit_delayed = parser_get_int( sub, "delay", &unit_base.delay );
         /* position */
