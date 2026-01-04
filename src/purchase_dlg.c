@@ -112,7 +112,7 @@ List *get_purchase_nations( void )
 	}
 	
 	for (i = 0; i < cur_player->nation_count; i++)
-		if (cur_player->nations[i]->no_purchase == 0)
+		if (cur_player->nations[i] && cur_player->nations[i]->no_purchase == 0)
 			list_add( l, cur_player->nations[i] );
 	return l;
 }
