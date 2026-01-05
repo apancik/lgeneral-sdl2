@@ -398,6 +398,33 @@ void copy( char *sname, char *dname )
     fclose( source );
     fclose( dest );
 }
+int save_surface_bmp24( SDL_Surface *surf, const char *path )
+{
+    SDL_Surface *converted = 0;
+    if ( surf == NULL || path == NULL ) {
+        fprintf( stderr, "save_surface_bmp24: invalid arguments\n" );
+        return 0;
+    }
+    if ( surf->format && surf->format->format == SDL_PIXELFORMAT_BGR24 ) {
+        if ( SDL_SaveBMP( surf, path ) != 0 ) {
+            fprintf( stderr, "%s: %s\n", path, SDL_GetError() );
+            return 0;
+        }
+        return 1;
+    }
+    converted = SDL_ConvertSurfaceFormat( surf, SDL_PIXELFORMAT_BGR24, 0 );
+    if ( converted == NULL ) {
+        fprintf( stderr, "%s: %s\n", path, SDL_GetError() );
+        return 0;
+    }
+    if ( SDL_SaveBMP( converted, path ) != 0 ) {
+        fprintf( stderr, "%s: %s\n", path, SDL_GetError() );
+        SDL_FreeSurface( converted );
+        return 0;
+    }
+    SDL_FreeSurface( converted );
+    return 1;
+}
 int copy_pg_bmp( char *src, char *dest )
 {
     SDL_Surface *surf = 0;
@@ -408,8 +435,8 @@ int copy_pg_bmp( char *src, char *dest )
         return 0;
     }
     snprintf( path, MAXPATHLEN, "%s/gfx/units/%s", dest_path, dest );
-    if ( SDL_SaveBMP( surf, path ) != 0 ) {
-        fprintf( stderr, "%s: %s\n", path, SDL_GetError() );
+    if ( !save_surface_bmp24( surf, path ) ) {
+        SDL_FreeSurface( surf );
         return 0;
     }
     SDL_FreeSurface( surf );

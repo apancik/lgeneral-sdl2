@@ -292,7 +292,7 @@ PG_Shp *shp_load( const char *fname )
     int old_pos, pos, pal_pos;
     PG_Shp *shp = 0; 
     int bpp;
-    Uint32 Rmask, Gmask, Bmask, Amask;
+    Uint32 pixel_format;
     Uint32 ckey;
     Icon_Header header;
     RGB_Entry pal[256];
@@ -345,18 +345,12 @@ PG_Shp *shp_load( const char *fname )
     }
     if ( lgcpg_screen ) {
         bpp = lgcpg_screen->format->BitsPerPixel;
-        Rmask = lgcpg_screen->format->Rmask;
-        Gmask = lgcpg_screen->format->Gmask;
-        Bmask = lgcpg_screen->format->Bmask;
-        Amask = lgcpg_screen->format->Amask;
+        pixel_format = lgcpg_screen->format->format;
     } else {
         bpp = 32;
-        Rmask = 0x00FF0000;
-        Gmask = 0x0000FF00;
-        Bmask = 0x000000FF;
-        Amask = 0xFF000000;
+        pixel_format = SDL_PIXELFORMAT_ARGB8888;
     }
-    shp->surf = SDL_CreateRGBSurface( SDL_SWSURFACE, width, height, bpp, Rmask, Gmask, Bmask, Amask );
+    shp->surf = SDL_CreateRGBSurfaceWithFormat( 0, width, height, bpp, pixel_format );
     if ( shp->surf == 0 ) {
         fprintf( stderr, "error creating surface: %s\n", SDL_GetError() );
         goto failure;
@@ -452,7 +446,7 @@ int shp_all_to_bmp( void )
         printf( "%s...\n", dirent->d_name );
         if ( ( shp = shp_load( dirent->d_name ) ) == 0 ) continue;
         snprintf( path, MAXPATHLEN, "%s/.view/%s.bmp", dest_path, dirent->d_name );
-        SDL_SaveBMP( shp->surf, path );
+        save_surface_bmp24( shp->surf, path );
         shp_free( &shp );
     }
     closedir( dir );

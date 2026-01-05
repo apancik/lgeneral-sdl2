@@ -636,9 +636,9 @@ int units_convert_graphics( char *tac_icons )
             height += shp->headers[i].actual_height + 2;
         else
             height += 10;
-    surf = SDL_CreateRGBSurface( SDL_SWSURFACE, shp->surf->w, height, shp->surf->format->BitsPerPixel,
-                                 shp->surf->format->Rmask, shp->surf->format->Gmask, shp->surf->format->Bmask,
-                                 shp->surf->format->Amask );
+    surf = SDL_CreateRGBSurfaceWithFormat( 0, shp->surf->w, height,
+                                           shp->surf->format->BitsPerPixel,
+                                           shp->surf->format->format );
     if ( surf == 0 ) {
         fprintf( stderr, "error creating surface: %s\n", SDL_GetError() );
         goto failure;
@@ -684,10 +684,8 @@ int units_convert_graphics( char *tac_icons )
     snprintf( path, MAXPATHLEN, "%s/gfx/units", dest_path );
     mkdir( path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH );
     snprintf( path, MAXPATHLEN, "%s/gfx/units/%s", dest_path, tac_icons );
-    if ( SDL_SaveBMP( surf, path ) != 0 ) {
-        fprintf( stderr, "%s: %s\n", path, SDL_GetError() );
+    if ( !save_surface_bmp24( surf, path ) )
         goto failure;
-    }
     SDL_FreeSurface( surf );
     shp_free( &shp );
     if (!copy_pg_bmp("strength.bmp","pg_strength.bmp")) goto failure;

@@ -189,13 +189,7 @@ int main( int argc, char **argv )
         printf( "lgc-pg requires a running graphical desktop environment. \n");
         exit( 1 );
     }
-    /* initialize a small software surface for lgc-pg (no window needed) */
-    if (SDL_Init( SDL_INIT_VIDEO | SDL_INIT_TIMER ) < 0) {
-        printf( "lgc-pg requires a running graphical desktop environment. \n");
-        exit( 1 );
-    }
-    SDL_Surface *screen = SDL_CreateRGBSurface(0, 320, 240, 32,
-                                                0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+    SDL_Surface *screen = SDL_CreateRGBSurfaceWithFormat(0, 320, 240, 32, SDL_PIXELFORMAT_ARGB8888);
     lgcpg_screen = screen;
     atexit( SDL_Quit );
     /* show nice image */

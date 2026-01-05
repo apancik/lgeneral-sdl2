@@ -140,6 +140,7 @@ Copy file
 void copy_ic( char *sname, char *dname );
 void copy( char *sname, char *dname );
 int copy_pg_bmp( char *src, char *dest );
+int save_surface_bmp24( SDL_Surface *surf, const char *path );
 
 /*
 ====================================================================

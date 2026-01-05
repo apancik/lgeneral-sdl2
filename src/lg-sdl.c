@@ -36,6 +36,9 @@ int cur_time, last_time;
 
 /* sdl surface */
 
+#define LG_SURFACE_PIXEL_FORMAT SDL_PIXELFORMAT_ARGB8888
+#define LG_SURFACE_BPP 32
+
 /* return full path of bitmap */
 void get_full_bmp_path( char *full_path, const char *file_name )
 {
@@ -50,7 +53,6 @@ SDL_Surface* load_surf(const char *fname, int f)
     SDL_Surface *buf;
     SDL_Surface *new_sur;
     char path[ 512 ];
-    SDL_PixelFormat *spf;
 
     get_full_bmp_path( path, fname );
 
@@ -63,21 +65,15 @@ SDL_Surface* load_surf(const char *fname, int f)
         else
             exit( 1 );
     }
-/*    if ( !(f & SDL_HWSURFACE) ) {
-
-        SDL_SetColorKey( buf, SDL_TRUE, 0x0 );
-        return buf;
-
-    }
-    new_sur = create_surf(buf->w, buf->h, f);
-    SDL_BlitSurface(buf, 0, new_sur, 0);
-    SDL_FreeSurface(buf);*/
-    if (sdl.screen)
-        spf = sdl.screen->format;
-    else
-        spf = buf->format;
-    new_sur = SDL_ConvertSurface(buf, spf, 0);
+    new_sur = SDL_ConvertSurfaceFormat(buf, LG_SURFACE_PIXEL_FORMAT, 0);
     SDL_FreeSurface( buf );
+    if ( new_sur == NULL ) {
+        fprintf( stderr, "%s: %s\n", fname, SDL_GetError() );
+        if ( f & SDL_NONFATAL )
+            return 0;
+        else
+            exit( 1 );
+    }
     SDL_SetColorKey( new_sur, SDL_TRUE, 0x0 );
     /* We rely on direct pixel reads (e.g. for color key detection), so keep RLE disabled. */
     SDL_SetSurfaceRLE( new_sur, SDL_FALSE );
@@ -124,24 +120,17 @@ SDL_Surface* colorkey_to_alpha(SDL_Surface *surf, Uint32 color_key)
 }
 
 /*
-    create an surface
-    MUST NOT BE USED IF NO SDLSCREEN IS SET
+    create an RGBA surface using the engine's preferred pixel format
 */
 SDL_Surface* create_surf(int w, int h, int f)
 {
     SDL_Surface *sur;
-    SDL_PixelFormat *spf = sdl.screen ? sdl.screen->format : NULL;
-    int bpp = spf ? spf->BitsPerPixel : 32;
-    Uint32 rmask = spf ? spf->Rmask : 0x00FF0000;
-    Uint32 gmask = spf ? spf->Gmask : 0x0000FF00;
-    Uint32 bmask = spf ? spf->Bmask : 0x000000FF;
-    Uint32 amask = spf ? spf->Amask : 0xFF000000;
-    if ((sur = SDL_CreateRGBSurface(0, w, h, bpp, rmask, gmask, bmask, amask)) == 0) {
+    (void)f;
+    sur = SDL_CreateRGBSurfaceWithFormat(0, w, h, LG_SURFACE_BPP, LG_SURFACE_PIXEL_FORMAT);
+    if (sur == 0) {
         fprintf(stderr, "ERR: ssur_create: not enough memory to create surface...\n");
         exit(1);
     }
-/*    if (f & SDL_HWSURFACE && !(sur->flags & SDL_HWSURFACE))
-        fprintf(stderr, "unable to create surface (%ix%ix%i) in hardware memory...\n", w, h, spf->BitsPerPixel);*/
     SDL_SetColorKey(sur, SDL_TRUE, 0x0);
     SDL_SetSurfaceRLE( sur, SDL_FALSE );
     SDL_SetSurfaceBlendMode(sur, SDL_BLENDMODE_NONE);

@@ -113,9 +113,9 @@ int nations_convert( void )
     for ( i = 0; i < nation_count; i++ )
         if ( shp->headers[i].valid )
             height += shp->headers[i].actual_height;
-    surf = SDL_CreateRGBSurface( SDL_SWSURFACE, shp->headers[0].actual_width, height, shp->surf->format->BitsPerPixel,
-                                 shp->surf->format->Rmask, shp->surf->format->Gmask, shp->surf->format->Bmask,
-                                 shp->surf->format->Amask );
+    surf = SDL_CreateRGBSurfaceWithFormat( 0, shp->headers[0].actual_width, height,
+                                           shp->surf->format->BitsPerPixel,
+                                           shp->surf->format->format );
     if ( surf == 0 ) {
         fprintf( stderr, "error creating surface: %s\n", SDL_GetError() );
         goto failure;
@@ -138,10 +138,8 @@ int nations_convert( void )
     snprintf( path, MAXPATHLEN, "%s/gfx/flags", dest_path );
     mkdir( path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH );
     snprintf( path, MAXPATHLEN, "%s/gfx/flags/%s.bmp", dest_path, target_name );
-    if ( SDL_SaveBMP( surf, path ) ) {
-        fprintf( stderr, "%s: %s\n", path, SDL_GetError() );
+    if ( !save_surface_bmp24( surf, path ) )
         goto failure;
-    }
     SDL_FreeSurface( surf );
     shp_free( &shp );
     return 1;

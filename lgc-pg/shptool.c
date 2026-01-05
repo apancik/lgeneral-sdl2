@@ -144,7 +144,7 @@ static void convert_shp_to_bmp() {
   if (!shp) abortf("Input file '%s' could not be loaded\n", input_file);
   
   verbosef(1, "Writing to %s\n", output_file);
-  if (SDL_SaveBMP(shp->surf, output_file) < 0)
+  if (!save_surface_bmp24(shp->surf, output_file))
     abortf("Could not write to '%s'\n", output_file);
 }
 

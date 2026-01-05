@@ -31,23 +31,14 @@ SDL must have been initialized before calling this.
 Buffer* buffer_create( int w, int h, SDL_Surface *surf, int x, int y )
 {
     Buffer *buffer = 0;
-    SDL_PixelFormat *format = 0;
-    if ( sdl.screen )
-        format = sdl.screen->format;
-    else {
-        fprintf( stderr, "buffer_create: video display not available\n" );
-        return 0;
-    }
     buffer = calloc( 1, sizeof( Buffer ) );
-    buffer->buf = SDL_CreateRGBSurface( 0, w, h,
-                                           format->BitsPerPixel,
-                                           format->Rmask, format->Gmask, format->Bmask,
-                                           format->Amask );
+    buffer->buf = create_surf( w, h, 0 );
     if ( buffer->buf == 0 ) {
         fprintf( stderr, "buffer_create: %s\n", SDL_GetError() );
         free( buffer );
         return 0;
     }
+    SDL_SetColorKey( buffer->buf, SDL_FALSE, 0 );
     buffer->buf_rect.w = buffer->surf_rect.w = buffer->old_rect.w = w;
     buffer->buf_rect.h = buffer->surf_rect.h = buffer->old_rect.h = h;
     buffer->buf_rect.x = buffer->buf_rect.y = 0;
@@ -333,13 +324,6 @@ Frame *frame_create( SDL_Surface *img, int alpha, SDL_Surface *surf, int x, int 
     SDL_Surface *empty_img;
     int w, h;
     Frame *frame = 0;
-    SDL_PixelFormat *format = 0;
-    if ( sdl.screen )
-        format = sdl.screen->format;
-    else {
-        fprintf( stderr, "buffer_create: video display not available\n" );
-        return 0;
-    }
     frame = calloc( 1, sizeof( Frame ) );
     /* frame */
     if ( img == 0 ) {
@@ -350,19 +334,13 @@ Frame *frame_create( SDL_Surface *img, int alpha, SDL_Surface *surf, int x, int 
     SDL_SetColorKey( frame->frame, SDL_TRUE, 0x0 );
     w = frame->frame->w; h = frame->frame->h;
     /* contents */
-    frame->contents = SDL_CreateRGBSurface( 0, w, h,
-                                            format->BitsPerPixel,
-                                            format->Rmask, format->Gmask, format->Bmask,
-                                            format->Amask );
+    frame->contents = create_surf( w, h, 0 );
     if ( frame->contents == 0 ) goto sdl_failure;
     SDL_SetColorKey( frame->contents, SDL_TRUE, 0x0 );
     /* shadow if any transparency  */
     frame->alpha = alpha;
     if ( alpha > 0 ) {
-        frame->shadow = SDL_CreateRGBSurface( 0, w, h,
-                                              format->BitsPerPixel,
-                                              format->Rmask, format->Gmask, format->Bmask,
-                                              format->Amask );
+        frame->shadow = create_surf( w, h, 0 );
         if ( frame->shadow == 0 ) goto sdl_failure;
         SDL_FillRect( frame->shadow, 0, 0x0 );
         SDL_SetColorKey( frame->shadow, SDL_TRUE, 0x0 );
@@ -372,10 +350,7 @@ Frame *frame_create( SDL_Surface *img, int alpha, SDL_Surface *surf, int x, int 
         SDL_SetSurfaceAlphaMod(frame->shadow, (Uint8)alpha);
     }
     /* image (empty frame per default)*/
-    empty_img = SDL_CreateRGBSurface( 0, w, h,
-                                 format->BitsPerPixel,
-                                 format->Rmask, format->Gmask, format->Bmask,
-                                 format->Amask );
+    empty_img = create_surf( w, h, 0 );
     if ( empty_img == 0 ) goto sdl_failure;
     SDL_FillRect( empty_img, 0, 0x0 );
     SDL_SetColorKey( empty_img, SDL_TRUE, 0x0 );
