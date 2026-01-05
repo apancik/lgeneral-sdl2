@@ -208,9 +208,9 @@ static int terrain_convert_tiles( char id, PG_Shp *shp, char *fname )
     }
 
     /* modified colors */
-    grass_pixel = SDL_MapRGB( surf->format, 192, 192, 112 );
-    snow_pixel = SDL_MapRGB( surf->format, 229, 229, 229 );
-    mud_pixel = SDL_MapRGB( surf->format, 206, 176, 101 );
+    grass_pixel = SDL_MapRGBA( surf->format, 192, 192, 116, 255 );
+    snow_pixel = SDL_MapRGBA( surf->format, 229, 229, 229, 255 );
+    mud_pixel = SDL_MapRGBA( surf->format, 206, 176, 101, 255 );
 
     /* copy pics */
     srect.w = drect.w = 60;
