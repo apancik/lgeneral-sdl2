@@ -271,7 +271,7 @@ static int build_render_chain(int width, int height)
         return 0;
     }
 
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
     SDL_RenderSetLogicalSize(sdl.renderer, width, height);
 #if SDL_VERSION_ATLEAST(2,0,5)
     SDL_RenderSetIntegerScale(sdl.renderer, SDL_FALSE);
