@@ -24,9 +24,6 @@
 extern "C" {
 #endif
 
-/* for development */
-//#define SDL_1_1_5
-
 // draw region //
 #define DEST(p, i, j, k, l) {sdl.d.s = p; sdl.d.r.x = i; sdl.d.r.y = j; sdl.d.r.w = k; sdl.d.r.h = l;}
 #define SOURCE(p, i, j) {sdl.s.s = p; sdl.s.r.x = i; sdl.s.r.y = j; sdl.s.r.w = sdl.d.r.w; sdl.s.r.h = sdl.d.r.h;}
@@ -43,7 +40,6 @@ SDL_Surface* load_surf(const char *fname, int f);
 SDL_Surface* create_surf(int w, int h, int f);
 SDL_Surface* colorkey_to_alpha(SDL_Surface *surf, Uint32 color_key);
 void free_surf( SDL_Surface **surf );
-int  disp_format(SDL_Surface *sur);
 void lock_surf(SDL_Surface *sur);
 void unlock_surf(SDL_Surface *sur);
 void blit_surf(void);
@@ -54,15 +50,9 @@ Uint32 set_pixel( SDL_Surface *surf, int x, int y, int pixel );
 Uint32 get_pixel( SDL_Surface *surf, int x, int y );
 
 // Sdl Font //
-#ifdef SDL_1_1_5
-enum {
-    OPAQUE = 0
-};
-#else
 enum {
     OPAQUE = 255
 };
-#endif
 enum {
     ALIGN_X_LEFT	= (1L<<1),
     ALIGN_X_CENTER	= (1L<<2),
@@ -114,6 +104,8 @@ typedef struct {
 } VideoModeInfo;
 typedef struct {
     SDL_Window  *window;
+    SDL_Renderer *renderer;
+    SDL_Texture  *texture;
     SDL_Surface *screen;
     DrawRgn     d, s;
     int         rect_count;

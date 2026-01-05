@@ -29,7 +29,7 @@ extern int  term_game;
 Sdl sdl;
 SDL_Cursor *empty_cursor = 0, *std_cursor = 0;
 
-/* under SDL2 we create a window and use its surface as the main screen */
+/* under SDL2 we create a window and render via SDL_Renderer/SDL_Texture */
 
 /* timer */
 int cur_time, last_time;
@@ -145,15 +145,6 @@ void free_surf( SDL_Surface **surf )
         *surf = 0;
     }
 }
-/*
-    return display format
-*/
-int disp_format(SDL_Surface *sur)
-{
-    /* SDL2 does not provide SDL_DisplayFormat; best-effort no-op */
-    (void)sur;
-    return 0;
-}
 
 /*
     lock surface
@@ -248,6 +239,82 @@ Uint32 get_pixel( SDL_Surface *surf, int x, int y )
     pos = y * surf->pitch + x * surf->format->BytesPerPixel;
     memcpy( &pixel, surf->pixels + pos, surf->format->BytesPerPixel );
     return pixel;
+}
+
+/* renderer-backed presentation helpers */
+static void destroy_render_chain(void)
+{
+    if (sdl.texture) {
+        SDL_DestroyTexture(sdl.texture);
+        sdl.texture = NULL;
+    }
+    if (sdl.renderer) {
+        SDL_DestroyRenderer(sdl.renderer);
+        sdl.renderer = NULL;
+    }
+    if (sdl.screen) {
+        SDL_FreeSurface(sdl.screen);
+        sdl.screen = NULL;
+    }
+}
+
+static int build_render_chain(int width, int height)
+{
+    Uint32 renderer_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+
+    sdl.renderer = SDL_CreateRenderer(sdl.window, -1, renderer_flags);
+    if (!sdl.renderer)
+        sdl.renderer = SDL_CreateRenderer(sdl.window, -1, SDL_RENDERER_SOFTWARE);
+    if (!sdl.renderer) {
+        fprintf(stderr, "Failed to create SDL renderer: %s\n", SDL_GetError());
+        destroy_render_chain();
+        return 0;
+    }
+
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+    SDL_RenderSetLogicalSize(sdl.renderer, width, height);
+#if SDL_VERSION_ATLEAST(2,0,5)
+    SDL_RenderSetIntegerScale(sdl.renderer, SDL_FALSE);
+#endif
+    SDL_SetRenderDrawColor(sdl.renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+
+    sdl.texture = SDL_CreateTexture(sdl.renderer, LG_SURFACE_PIXEL_FORMAT, SDL_TEXTUREACCESS_STREAMING, width, height);
+    if (!sdl.texture) {
+        fprintf(stderr, "Failed to create SDL texture: %s\n", SDL_GetError());
+        destroy_render_chain();
+        return 0;
+    }
+
+    sdl.screen = create_surf(width, height, 0);
+    SDL_SetColorKey(sdl.screen, SDL_FALSE, 0);
+    SDL_SetSurfaceBlendMode(sdl.screen, SDL_BLENDMODE_NONE);
+    SDL_SetSurfaceAlphaMod(sdl.screen, 255);
+
+    sdl.rect_count = 0;
+    return 1;
+}
+
+static void present_output(const SDL_Rect *rects, int count)
+{
+    if (!sdl.renderer || !sdl.texture || !sdl.screen)
+        return;
+
+    if (!rects || count <= 0) {
+        SDL_UpdateTexture(sdl.texture, NULL, sdl.screen->pixels, sdl.screen->pitch);
+    } else {
+        const int pitch = sdl.screen->pitch;
+        const int bpp = sdl.screen->format->BytesPerPixel;
+        const Uint8 *base = (const Uint8 *)sdl.screen->pixels;
+        for (int i = 0; i < count; ++i) {
+            SDL_Rect r = rects[i];
+            const void *start = base + r.y * pitch + r.x * bpp;
+            SDL_UpdateTexture(sdl.texture, &r, start, pitch);
+        }
+    }
+
+    SDL_RenderClear(sdl.renderer);
+    SDL_RenderCopy(sdl.renderer, sdl.texture, NULL, NULL);
+    SDL_RenderPresent(sdl.renderer);
 }
 
 /* sdl font */
@@ -592,6 +659,8 @@ void init_sdl( int f )
 #endif
 
     sdl.window = NULL;
+    sdl.renderer = NULL;
+    sdl.texture = NULL;
     sdl.screen = NULL;
     if (SDL_Init(f) < 0) {
         fprintf(stderr, "ERR: sdl_init: %s", SDL_GetError());
@@ -624,7 +693,7 @@ void init_sdl( int f )
 */
 void quit_sdl()
 {
-    if (sdl.screen) sdl.screen = NULL;
+    destroy_render_chain();
     if (sdl.window) {
         SDL_DestroyWindow(sdl.window);
         sdl.window = NULL;
@@ -689,24 +758,30 @@ int set_video_mode( int width, int height, int fullscreen )
         SDL_GetWindowSize(sdl.window, &w, &h);
         if (w == width && h == height && is_fullscreen == fullscreen)
             return 1;
+        destroy_render_chain();
         SDL_DestroyWindow(sdl.window);
         sdl.window = NULL;
-        sdl.screen = NULL;
     }
 
-    Uint32 win_flags = SDL_WINDOW_SHOWN;
+    Uint32 win_flags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
     if (fullscreen) win_flags |= SDL_WINDOW_FULLSCREEN;
     sdl.window = SDL_CreateWindow(LG_WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, width, height, win_flags);
     if (!sdl.window) {
         fprintf(stderr, "%s\n", SDL_GetError());
         /* fallback to 800x600 */
-        sdl.window = SDL_CreateWindow(LG_WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN);
+        sdl.window = SDL_CreateWindow(LG_WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI);
         if (!sdl.window) {
             fprintf(stderr, "Failed to create SDL window: %s\n", SDL_GetError());
             return 0;
         }
+        width = 800;
+        height = 600;
     }
-    sdl.screen = SDL_GetWindowSurface(sdl.window);
+    if (!build_render_chain(width, height)) {
+        SDL_DestroyWindow(sdl.window);
+        sdl.window = NULL;
+        return 0;
+    }
 
 #ifdef SDL_DEBUG
     if (sdl.screen) {
@@ -740,7 +815,20 @@ void hardware_cap()
 */
 void refresh_screen(int x, int y, int w, int h)
 {
-    if (sdl.window) SDL_UpdateWindowSurface(sdl.window);
+    SDL_Rect rect;
+    SDL_Rect *rect_ptr = NULL;
+    int count = 0;
+
+    if (w > 0 && h > 0) {
+        rect.x = x;
+        rect.y = y;
+        rect.w = w;
+        rect.h = h;
+        rect_ptr = &rect;
+        count = 1;
+    }
+
+    present_output(rect_ptr, count);
     sdl.rect_count = 0;
 }
 
@@ -749,7 +837,7 @@ void refresh_screen(int x, int y, int w, int h)
 */
 void refresh_rects()
 {
-    if (sdl.window) SDL_UpdateWindowSurface(sdl.window);
+    present_output(sdl.rect_count ? sdl.rect : NULL, sdl.rect_count);
     sdl.rect_count = 0;
 }
 
@@ -758,6 +846,7 @@ void refresh_rects()
 */
 void add_refresh_region( int x, int y, int w, int h )
 {
+    if (!sdl.screen) return;
     if (sdl.rect_count == RECT_LIMIT) return;
     if (x < 0) {
         w += x;
@@ -911,7 +1000,8 @@ inline void unlock_screen()
 */
 inline void flip_screen()
 {
-    if (sdl.window) SDL_UpdateWindowSurface(sdl.window);
+    present_output(NULL, 0);
+    sdl.rect_count = 0;
 }
 
 /* cursor */
