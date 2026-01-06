@@ -262,6 +262,7 @@ static int engine_capture_flag( Unit *unit );
 //static void engine_show_game_menu( int cx, int cy );
 static void engine_handle_button( int id );
 static int engine_has_strategic_target(int active, int x,int y);
+static int engine_calc_fullscreen_height( int width );
 
 /*
 ====================================================================
@@ -2109,6 +2110,30 @@ static void engine_end_frame()
 
 /*
 ====================================================================
+Compute fullscreen height that matches the current display aspect ratio.
+====================================================================
+*/
+static int engine_calc_fullscreen_height( int width )
+{
+    int display_index = 0;
+
+    if ( sdl.window ) {
+        int idx = SDL_GetWindowDisplayIndex( sdl.window );
+        if ( idx >= 0 ) display_index = idx;
+    }
+
+    SDL_Rect usable;
+    if ( SDL_GetDisplayUsableBounds( display_index, &usable ) == 0 && usable.w > 0 ) {
+        long long numer = (long long)usable.h * width;
+        return (int)(( numer + ( usable.w / 2 ) ) / usable.w);
+    }
+    
+
+    return 720;
+}
+
+/*
+====================================================================
 Handle a button that was clicked.
 ====================================================================
 */
@@ -2207,7 +2232,11 @@ static void engine_handle_button( int id )
                 	action_queue_set_vmode(800, 600, 0);
         	} else {
         		config.fullscreen = 1;
-        		action_queue_set_vmode(1280, 720, 1);
+
+                const int fs_width = 1280;
+                int fs_height = engine_calc_fullscreen_height( fs_width );
+                
+                action_queue_set_vmode(fs_width, fs_height, 1);
         	}
         	group_hide(gui->opt_menu,1);
             /*engine_hide_game_menu();
