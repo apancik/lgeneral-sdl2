@@ -260,7 +260,7 @@ static void destroy_render_chain(void)
 
 static int build_render_chain(int width, int height)
 {
-    Uint32 renderer_flags = SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC;
+    Uint32 renderer_flags = SDL_RENDERER_ACCELERATED;
 
     sdl.renderer = SDL_CreateRenderer(sdl.window, -1, renderer_flags);
     if (!sdl.renderer)
