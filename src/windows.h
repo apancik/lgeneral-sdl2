@@ -217,7 +217,7 @@ void edit_delete( Edit **edit );
 Draw label
 ====================================================================
 */
-#define edit_hide( edit, hide ) do { if (hide) SDL_StopTextInput(); buffer_hide( edit->label->frame->img->bkgnd, hide ); } while(0)
+#define edit_hide( edit, hide ) do { if (hide) { SDL_StopTextInput(); (edit)->cursor_pos = 0; } buffer_hide( (edit)->label->frame->img->bkgnd, hide ); } while(0)
 #define edit_get_bkgnd( edit ) buffer_get( edit->label->frame->img->bkgnd )
 #define edit_draw_bkgnd( edit ) buffer_draw( edit->label->frame->img->bkgnd )
 void edit_draw( Edit *edit );
