@@ -10,7 +10,15 @@ project(lgeneral VERSION 1.4.4 LANGUAGES C CXX)
 # ==============================================================================
 # Standard includes and configuration
 # ==============================================================================
+
 include(GNUInstallDirs)
+
+# Collect common search hints used for libintl on macOS/Homebrew and Linux
+set(LG_INTL_INCLUDE_HINTS
+	/opt/homebrew/opt/gettext/include
+	/usr/local/opt/gettext/include
+	/usr/local/include
+	/usr/include)
 
 # Place all executables in a single bin/ folder inside the build tree
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
@@ -50,11 +58,21 @@ endif()
 include(CheckIncludeFiles)
 include(CheckFunctionExists)
 include(CheckSymbolExists)
+find_package(Gettext QUIET)
 
 find_package(PkgConfig QUIET)
 
 check_include_files("string.h;strings.h" HAVE_STRING_H)
 check_include_files("locale.h" HAVE_LOCALE_H)
+
+# libintl.h may live in non-default prefixes (e.g. Homebrew)
+set(_intl_required_includes ${CMAKE_REQUIRED_INCLUDES})
+find_path(LG_INTL_INCLUDE_DIR libintl.h HINTS ${LG_INTL_INCLUDE_HINTS})
+if(LG_INTL_INCLUDE_DIR)
+	list(APPEND CMAKE_REQUIRED_INCLUDES ${LG_INTL_INCLUDE_DIR})
+endif()
+check_include_files("libintl.h" HAVE_LIBINTL_H)
+set(CMAKE_REQUIRED_INCLUDES ${_intl_required_includes})
 
 check_symbol_exists(strcasestr "string.h" HAVE_STRCASESTR)
 
@@ -64,32 +82,10 @@ check_function_exists(putenv HAVE_PUTENV)
 
 
 # ==============================================================================
-# Configuration header generation
-# ==============================================================================
-# configure_file will process #cmakedefine and @PACKAGE@/@VERSION@
-# Generate the single configured header used by the project. Sources include
-# `lgeneral_config.h` (see `src/config.h`) so we only generate that name.
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}/lgeneral_config.h)
-
-add_library(lgeneral_config INTERFACE)
-target_include_directories(lgeneral_config INTERFACE ${CMAKE_BINARY_DIR})
-target_compile_definitions(lgeneral_config INTERFACE HAVE_CONFIG_H)
-if(UNIX)
-	target_compile_definitions(lgeneral_config INTERFACE _GNU_SOURCE)
-endif()
-add_library(lgeneral::config ALIAS lgeneral_config)
-
-# Minimal platform interface for common system libs
-add_library(lgeneral_platform INTERFACE)
-if(UNIX)
-	target_link_libraries(lgeneral_platform INTERFACE m)
-endif()
-add_library(lgeneral::platform ALIAS lgeneral_platform)
-
-# ==============================================================================
 # Build options
 # ==============================================================================
 option(USE_SDL "Enable SDL support (if available)" ON)
+option(ENABLE_NLS "Enable Native Language Support (gettext)" ON)
 option(BUILD_LGED "Build the GTK-based lged editor" OFF)
 option(BUILD_REDIT "Build the GTK-based lgeneral-redit editor" OFF)
 option(BUILD_LGEDITOR "Build the SDL-based lgeditor map editor" OFF)
@@ -105,6 +101,7 @@ set(LG_HAVE_SDL_MIXER OFF)
 set(LG_HAVE_SDL_IMAGE OFF)
 set(LG_HAVE_SDL_TTF OFF)
 set(LG_HAVE_INTL OFF)
+set(LG_ENABLE_NLS OFF)
 
 if(USE_SDL)
 	find_package(SDL2 QUIET)
@@ -246,12 +243,10 @@ if(NOT TARGET lgeneral_intl)
 	if(INTL_LIB)
 		add_library(lgeneral_intl INTERFACE)
 		target_link_libraries(lgeneral_intl INTERFACE ${INTL_LIB})
-		find_path(INTL_INCLUDE_DIR libintl.h
-			HINTS
-				/opt/homebrew/opt/gettext/include
-				/usr/local/opt/gettext/include
-				/usr/local/include
-				/usr/include)
+		if(NOT INTL_INCLUDE_DIR AND LG_INTL_INCLUDE_DIR)
+			set(INTL_INCLUDE_DIR ${LG_INTL_INCLUDE_DIR})
+		endif()
+		find_path(INTL_INCLUDE_DIR libintl.h HINTS ${LG_INTL_INCLUDE_HINTS})
 		if(INTL_INCLUDE_DIR)
 			target_include_directories(lgeneral_intl INTERFACE ${INTL_INCLUDE_DIR})
 		endif()
@@ -260,11 +255,59 @@ if(NOT TARGET lgeneral_intl)
 	endif()
 endif()
 
+# Fallback include dir for downstream targets when libintl was found but
+# INTL_INCLUDE_DIR stayed unset (cache reuse edge cases)
+if(LG_HAVE_INTL AND NOT INTL_INCLUDE_DIR AND LG_INTL_INCLUDE_DIR)
+	set(INTL_INCLUDE_DIR ${LG_INTL_INCLUDE_DIR})
+endif()
+
+if(ENABLE_NLS)
+	if(NOT GETTEXT_FOUND OR NOT GETTEXT_MSGFMT_EXECUTABLE)
+		message(WARNING "NLS requested but gettext tools (msgfmt) not found; disabling translations")
+	elseif(NOT HAVE_LIBINTL_H AND NOT LG_HAVE_INTL)
+		message(WARNING "NLS requested but libintl headers/libs not found; disabling translations")
+	else()
+		set(LG_ENABLE_NLS ON)
+	endif()
+endif()
+
+# ==============================================================================
+# Configuration header generation
+# ==============================================================================
+# configure_file will process #cmakedefine and @PACKAGE@/@VERSION@
+# Generate the single configured header used by the project. Sources include
+# `lgeneral_config.h` (see `src/config.h`) so we only generate that name.
+set(ENABLE_NLS ${LG_ENABLE_NLS})
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/config.h.in ${CMAKE_BINARY_DIR}/lgeneral_config.h)
+
+add_library(lgeneral_config INTERFACE)
+target_include_directories(lgeneral_config INTERFACE ${CMAKE_BINARY_DIR})
+target_compile_definitions(lgeneral_config INTERFACE HAVE_CONFIG_H)
+if(LG_ENABLE_NLS)
+	target_compile_definitions(lgeneral_config INTERFACE ENABLE_NLS)
+endif()
+if(UNIX)
+	target_compile_definitions(lgeneral_config INTERFACE _GNU_SOURCE)
+endif()
+add_library(lgeneral::config ALIAS lgeneral_config)
+
+# Minimal platform interface for common system libs
+add_library(lgeneral_platform INTERFACE)
+if(UNIX)
+	target_link_libraries(lgeneral_platform INTERFACE m)
+endif()
+add_library(lgeneral::platform ALIAS lgeneral_platform)
+
 # ==============================================================================
 # Subdirectories
 # ==============================================================================
 add_subdirectory(src)
 add_subdirectory(lgc-pg)
+if(LG_ENABLE_NLS)
+	add_subdirectory(po)
+else()
+	message(STATUS "Skipping translations (ENABLE_NLS=OFF or gettext missing)")
+endif()
 if(BUILD_LGED)
 	add_subdirectory(lged)
 else()
@@ -295,6 +338,7 @@ message(STATUS "  SDL available:     ${LG_HAVE_SDL}")
 message(STATUS "  SDL_mixer audio:   ${LG_HAVE_SDL_MIXER}")
 message(STATUS "  SDL_image:         ${LG_HAVE_SDL_IMAGE}")
 message(STATUS "  SDL_ttf:           ${LG_HAVE_SDL_TTF}")
+message(STATUS "  NLS enabled:       ${LG_ENABLE_NLS}")
 message(STATUS "  libintl:           ${LG_HAVE_INTL}")
 message(STATUS "  Build lged:        ${BUILD_LGED}")
 message(STATUS "  Build redit:       ${BUILD_REDIT}")

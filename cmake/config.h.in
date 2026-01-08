@@ -3,6 +3,9 @@
 #define VERSION "@PROJECT_VERSION@"
 #define TOP_SRCDIR "@TOP_SRCDIR@"
 
+/* Native language support */
+#cmakedefine ENABLE_NLS 1
+
 /* Header availability */
 /* Define to 1 if you have the <string.h> or <strings.h> header. */
 #ifndef HAVE_STRING_H
@@ -11,6 +14,10 @@
 /* Define to 1 if you have <locale.h> */
 #ifndef HAVE_LOCALE_H
 #cmakedefine01 HAVE_LOCALE_H
+#endif
+/* Define to 1 if you have <libintl.h> */
+#ifndef HAVE_LIBINTL_H
+#cmakedefine01 HAVE_LIBINTL_H
 #endif
 
 /* Function / symbol availability */

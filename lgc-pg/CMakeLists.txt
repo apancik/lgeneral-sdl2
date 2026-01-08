@@ -38,6 +38,17 @@ target_link_libraries(lgc-pg PRIVATE
     lgeneral::platform
 )
 
+# Provide install-time data root so converter can find convdata after install
+if(NOT DEFINED INSTALLDIR)
+    set(INSTALLDIR "${CMAKE_INSTALL_FULL_DATADIR}/lgc-pg" CACHE PATH "Runtime data directory used by the binary (compile-time)")
+else()
+    set(INSTALLDIR "${INSTALLDIR}" CACHE PATH "Runtime data directory used by the binary (compile-time)" FORCE)
+endif()
+
+target_compile_definitions(lgc-pg PRIVATE
+    "INSTALLDIR=\"${INSTALLDIR}\""
+)
+
 if(LG_HAVE_SDL)
     target_link_libraries(lgc-pg PRIVATE lgeneral::sdl)
 endif()
@@ -62,10 +73,15 @@ install(TARGETS lgc-pg
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+# Install man page
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/lgc-pg.1"
+    DESTINATION "${CMAKE_INSTALL_MANDIR}/man1"
+)
+
 # Install convdata resources
 if(INSTALL_DATA)
     install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/convdata"
-        DESTINATION ${CMAKE_INSTALL_DATADIR}/lgc-pg
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/lgc-pg"
     )
 endif()
 
@@ -112,6 +128,17 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/shptool.c")
     if(LG_HAVE_SDL)
         target_link_libraries(shptool PRIVATE lgeneral::sdl)
     endif()
+
+    # Keep the helper tool aligned with the converter's data root
+    if(NOT DEFINED INSTALLDIR)
+        set(INSTALLDIR "${CMAKE_INSTALL_FULL_DATADIR}/lgc-pg" CACHE PATH "Runtime data directory used by the binary (compile-time)")
+    else()
+        set(INSTALLDIR "${INSTALLDIR}" CACHE PATH "Runtime data directory used by the binary (compile-time)" FORCE)
+    endif()
+
+    target_compile_definitions(shptool PRIVATE
+        "INSTALLDIR=\"${INSTALLDIR}\""
+    )
     
     # ------------------------------------------------------------------------------
     # Output configuration

@@ -38,6 +38,19 @@ target_include_directories(lgeneral PRIVATE
     ${PROJECT_SOURCE_DIR}/util
 )
 
+# Allow overriding the install data dir at configure time. If not provided,
+# fall back to the computed install datadir under the install prefix.
+if(NOT DEFINED INSTALLDIR)
+    set(INSTALLDIR "${CMAKE_INSTALL_FULL_DATADIR}/lgeneral" CACHE PATH "Runtime data directory used by the binary (compile-time)")
+else()
+    # Accept user-specified value as a cache entry so it shows up in GUIs
+    set(INSTALLDIR "${INSTALLDIR}" CACHE PATH "Runtime data directory used by the binary (compile-time)" FORCE)
+endif()
+
+target_compile_definitions(lgeneral PRIVATE
+    "INSTALLDIR=\"${INSTALLDIR}\""
+)
+
 # ------------------------------------------------------------------------------
 # Dependencies and libraries
 # ------------------------------------------------------------------------------
@@ -54,8 +67,18 @@ if(LG_HAVE_SDL_MIXER)
     target_link_libraries(lgeneral PRIVATE lgeneral::sdl_mixer)
 endif()
 
-if(LG_HAVE_INTL)
-    target_link_libraries(lgeneral PRIVATE lgeneral::intl)
+if(LG_ENABLE_NLS)
+    if(TARGET lgeneral::intl)
+        target_link_libraries(lgeneral PRIVATE lgeneral::intl)
+    endif()
+
+    if(INTL_LIB)
+        target_link_libraries(lgeneral PRIVATE ${INTL_LIB})
+    endif()
+
+    if(INTL_INCLUDE_DIR)
+        target_include_directories(lgeneral PRIVATE ${INTL_INCLUDE_DIR})
+    endif()
 endif()
 
 # ------------------------------------------------------------------------------
@@ -96,12 +119,24 @@ install(TARGETS lgeneral
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+# Install man page
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/lgeneral.6"
+    DESTINATION "${CMAKE_INSTALL_MANDIR}/man6"
+)
+
+# Install desktop file (Linux only)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    install(FILES "${PROJECT_SOURCE_DIR}/lgeneral.desktop"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/applications"
+    )
+endif()
+
 # Install game data files if requested
 if(INSTALL_DATA)
     foreach(_dir IN LISTS LGENERAL_DATA_DIRS)
         if(EXISTS "${PROJECT_SOURCE_DIR}/src/${_dir}")
             install(DIRECTORY "${PROJECT_SOURCE_DIR}/src/${_dir}"
-                DESTINATION ${CMAKE_INSTALL_DATADIR}/lgeneral
+                DESTINATION "${CMAKE_INSTALL_DATADIR}/lgeneral"
             )
         endif()
     endforeach()

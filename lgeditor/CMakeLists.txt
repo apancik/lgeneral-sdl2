@@ -10,7 +10,7 @@ if(NOT _LGEDITOR_RUNTIME_BIN)
 endif()
 
 set(LGEDITOR_DATADIR "${CMAKE_INSTALL_FULL_DATADIR}/lgeditor" CACHE PATH "Install-time runtime data directory for lgeditor assets")
-set(LGEDITOR_LGENERAL_DIR "${CMAKE_INSTALL_FULL_BINDIR}" CACHE PATH "Install-time path to the LGeneral binary directory used by lgeditor")
+set(LGEDITOR_LGENERAL_DIR "${CMAKE_INSTALL_FULL_DATADIR}/lgeneral" CACHE PATH "Install-time path to the LGeneral data directory used by lgeditor")
 set(LGEDITOR_DATADIR_BUILD "${_LGEDITOR_RUNTIME_BIN}/lgeditor-data")
 set(LGEDITOR_LGENERAL_DIR_BUILD "${_LGEDITOR_RUNTIME_BIN}")
 

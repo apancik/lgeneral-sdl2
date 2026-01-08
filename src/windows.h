@@ -76,7 +76,7 @@ typedef struct {
     SDL_Rect button_rect;   /* region in button surface */
     SDL_Rect surf_rect;     /* region in buffer::surface */ 
     int id;                 /* if returned on click */
-    char tooltip[32];       /* displayed as short help */
+    char tooltip[64];       /* displayed as short help */
     int active;             /* true if button may be used */
     int down;               /* true if currently pressed */
     int lock;               /* keep button down when released */

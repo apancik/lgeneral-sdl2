@@ -29,7 +29,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef PATHS_GENERIC
 const char *paths_exec_path(void) {
   return "";
 }
@@ -42,6 +41,5 @@ const char *paths_prefix(void) {
   return ".";
 #endif
 }
-#endif
 
 /* kate: tab-indents on; space-indent on; replace-tabs off; indent-width 2; dynamic-word-wrap off; inden(t)-mode cstyle */

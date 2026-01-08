@@ -162,11 +162,16 @@ int locale_load_domain(const char *domain, const char *translations) {
 #ifdef ENABLE_NLS
   {
     char *path;
+    const char *envdir = getenv("TEXTDOMAINDIR");
     const char suffix[] = "/share/locale";
-    unsigned len = strlen(paths_prefix());
-    path = malloc(len + sizeof suffix);
-    strcpy(path, paths_prefix());
-    strcpy(path + len, suffix);
+    if(envdir && *envdir) {
+      path = strdup(envdir);
+    } else {
+      unsigned len = strlen(paths_prefix());
+      path = malloc(len + sizeof suffix);
+      strcpy(path, paths_prefix());
+      strcpy(path + len, suffix);
+    }
     bindtextdomain(domain, path);
   }
 #endif
