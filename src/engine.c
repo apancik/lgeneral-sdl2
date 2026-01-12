@@ -518,7 +518,7 @@ static void engine_check_menu_buttons()
     else
         group_set_active( gui->base_menu, ID_MENU, 1 );
     /* info */
-    if ( status != STATUS_NONE )
+    if ( status != STATUS_NONE && status != STATUS_SCEN_INFO )
         group_set_active( gui->base_menu, ID_SCEN_INFO, 0 );
     else
         group_set_active( gui->base_menu, ID_SCEN_INFO, 1 );
@@ -533,7 +533,7 @@ static void engine_check_menu_buttons()
     else
         group_set_active( gui->base_menu, ID_DEPLOY, 0 );
     //unit list
-    if ( status == STATUS_NONE )
+    if ( status == STATUS_NONE || status == STATUS_UNIT_LIST )
         group_set_active( gui->base_menu, ID_UNIT_LIST, 1 );
     else
         group_set_active( gui->base_menu, ID_UNIT_LIST, 0 );
@@ -548,7 +548,7 @@ static void engine_check_menu_buttons()
     else
         group_set_active( gui->base_menu, ID_END_TURN, 1 );
     /* victory conditions */
-    if ( status != STATUS_NONE )
+    if ( status != STATUS_NONE && status != STATUS_SCEN_INFO )
         group_set_active( gui->base_menu, ID_CONDITIONS, 0 );
     else
         group_set_active( gui->base_menu, ID_CONDITIONS, 1 );
@@ -2354,13 +2354,27 @@ static void engine_handle_button( int id )
             break;
         case ID_SCEN_INFO:
             engine_hide_game_menu();
-            gui_show_scen_info();
-            status = STATUS_SCEN_INFO;
+            if (status == STATUS_SCEN_INFO) {
+                /* Toggle off - close window */
+                frame_hide( gui->sinfo, 1 );
+                engine_set_status( STATUS_NONE );
+            } else {
+                /* Toggle on - show window */
+                gui_show_scen_info();
+                status = STATUS_SCEN_INFO;
+            }
             break;
         case ID_CONDITIONS:
             engine_hide_game_menu();
-            gui_show_conds();
-            status = STATUS_SCEN_INFO; /* is okay for the engine ;) */
+            if (status == STATUS_SCEN_INFO) {
+                /* Toggle off - close window */
+                frame_hide( gui->sinfo, 1 );
+                engine_set_status( STATUS_NONE );
+            } else {
+                /* Toggle on - show window */
+                gui_show_conds();
+                status = STATUS_SCEN_INFO; /* is okay for the engine ;) */
+            }
             break;
         case ID_CANCEL:
             /* a confirmation window is run before an action so if cancel
@@ -2522,9 +2536,16 @@ static void engine_handle_button( int id )
             break;
         case ID_UNIT_LIST:
             engine_hide_game_menu();
-            gui_render_unit_list(gui_prepare_unit_list(),units);
-            gui_show_unit_list();
-            status = STATUS_UNIT_LIST;
+            if (status == STATUS_UNIT_LIST) {
+                /* Toggle off - close window */
+                gui_hide_unit_list();
+                engine_set_status( STATUS_NONE );
+            } else {
+                /* Toggle on - show window */
+                gui_render_unit_list(gui_prepare_unit_list(),units);
+                gui_show_unit_list();
+                status = STATUS_UNIT_LIST;
+            }
             break;
         case ID_STRAT_MAP:
             /* toggle minimap */
@@ -3231,6 +3252,17 @@ static void engine_check_events(int *reinit)
                         engine_handle_button(ID_OK);
                     else if ( event.key.keysym.sym == SDLK_ESCAPE )
                         engine_handle_button(ID_CANCEL);
+                } else if ( status == STATUS_SCEN_INFO ) {
+                    if ( event.key.keysym.sym == SDLK_ESCAPE ) {
+                        engine_set_status( STATUS_NONE );
+                        frame_hide( gui->sinfo, 1 );
+                        old_mx = old_my = -1;
+                    }
+                } else if ( status == STATUS_UNIT_LIST ) {
+                    if ( event.key.keysym.sym == SDLK_ESCAPE ) {
+                        status = STATUS_NONE;
+                        gui_hide_unit_list();
+                    }
                 } else if ( status == STATUS_RENAME || status == STATUS_SAVE ) {
                     if ( event.key.keysym.sym == SDLK_RETURN ) {
                         /* apply */
