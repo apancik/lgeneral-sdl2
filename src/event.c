@@ -17,6 +17,7 @@
 
 #include "lgeneral.h"
 #include "event.h"
+#include "lg-sdl.h"
 
 int buttonup = 0, buttondown = 0;
 int motion = 0;
@@ -24,6 +25,26 @@ int motion_x = 50, motion_y = 50;
 static Uint8 keystate_map[SDL_NUM_SCANCODES];
 int buttonstate[10];
 int sdl_quit = 0;
+
+static void normalize_mouse_pos(int wx, int wy, int *lx, int *ly)
+{
+#if SDL_VERSION_ATLEAST(2,0,18)
+    if (sdl.renderer) {
+        float fx = 0.0f, fy = 0.0f;
+        SDL_RenderWindowToLogical(sdl.renderer, (float)wx, (float)wy, &fx, &fy);
+        *lx = (int)(fx + 0.5f);
+        *ly = (int)(fy + 0.5f);
+        return;
+    }
+#endif
+    if (sdl.input_scale_x > 0.0 && sdl.input_scale_y > 0.0) {
+        *lx = (int)( (double)wx / sdl.input_scale_x + 0.5 );
+        *ly = (int)( (double)wy / sdl.input_scale_y + 0.5 );
+        return;
+    }
+    *lx = wx;
+    *ly = wy;
+}
 
 /*
 ====================================================================
@@ -71,8 +92,7 @@ int event_filter( void *userdata, SDL_Event *event )
 {
     switch ( event->type ) {
         case SDL_MOUSEMOTION:
-            motion_x = event->motion.x;
-            motion_y = event->motion.y;
+            normalize_mouse_pos(event->motion.x, event->motion.y, &motion_x, &motion_y);
             buttonstate[BUTTON_LEFT] = (event->motion.state & SDL_BUTTON(SDL_BUTTON_LEFT)) ? 1 : 0;
             buttonstate[BUTTON_MIDDLE] = (event->motion.state & SDL_BUTTON(SDL_BUTTON_MIDDLE)) ? 1 : 0;
             buttonstate[BUTTON_RIGHT] = (event->motion.state & SDL_BUTTON(SDL_BUTTON_RIGHT)) ? 1 : 0;
@@ -80,10 +100,12 @@ int event_filter( void *userdata, SDL_Event *event )
             return 0;
         case SDL_MOUSEBUTTONUP:
             if ( event->button.button >= 0 && event->button.button < 10 ) buttonstate[event->button.button] = 0;
+            normalize_mouse_pos(event->button.x, event->button.y, &motion_x, &motion_y);
             buttonup = event->button.button;
             return 0;
         case SDL_MOUSEBUTTONDOWN:
             if ( event->button.button >= 0 && event->button.button < 10 ) buttonstate[event->button.button] = 1;
+            normalize_mouse_pos(event->button.x, event->button.y, &motion_x, &motion_y);
             buttondown = event->button.button;
             return 0;
         case SDL_KEYUP: {

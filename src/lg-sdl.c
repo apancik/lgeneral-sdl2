@@ -290,6 +290,27 @@ static int build_render_chain(int width, int height)
     SDL_SetSurfaceBlendMode(sdl.screen, SDL_BLENDMODE_NONE);
     SDL_SetSurfaceAlphaMod(sdl.screen, 255);
 
+    /* cache logical size and the ratio between drawable and logical space for input scaling */
+    {
+        int lw = width, lh = height;
+        int out_w = width, out_h = height;
+        SDL_RenderGetLogicalSize(sdl.renderer, &lw, &lh);
+        if (lw == 0 || lh == 0) {
+            lw = width;
+            lh = height;
+        }
+        if (SDL_GetRendererOutputSize(sdl.renderer, &out_w, &out_h) != 0) {
+            out_w = width;
+            out_h = height;
+        }
+        sdl.logical_w = lw;
+        sdl.logical_h = lh;
+        sdl.input_scale_x = (lw > 0) ? ((double)out_w / (double)lw) : 1.0;
+        sdl.input_scale_y = (lh > 0) ? ((double)out_h / (double)lh) : 1.0;
+        if (sdl.input_scale_x <= 0.0) sdl.input_scale_x = 1.0;
+        if (sdl.input_scale_y <= 0.0) sdl.input_scale_y = 1.0;
+    }
+
     sdl.rect_count = 0;
     return 1;
 }

@@ -112,7 +112,12 @@ typedef struct {
     SDL_Rect    rect[RECT_LIMIT];
     int         num_vmodes;
     VideoModeInfo *vmodes;
+    int         logical_w;
+    int         logical_h;
+    double      input_scale_x;
+    double      input_scale_y;
 } Sdl;
+extern Sdl sdl;
 void init_sdl( int f );
 void quit_sdl();
 int get_video_modes( VideoModeInfo **vmi );
