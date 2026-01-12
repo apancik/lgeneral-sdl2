@@ -3479,6 +3479,9 @@ static void engine_handle_next_action( int *reinit )
                 }
                 /* retarget transient/global images not managed by GUI */
                 if ( move_image ) image_set_surface( move_image, sdl.screen );
+                /* refresh entire screen */
+                refresh_screen( 0, 0, 0, 0 );
+                engine_draw_map();
                 /* adjust windows */
                 gui_resize_panel();
                 gui_adjust();
