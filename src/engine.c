@@ -4414,6 +4414,11 @@ static void engine_main_loop( int *reinit )
         engine_handle_next_action( reinit );
         /* get time */
         ms = get_time();
+
+        /* frame limiter */
+        const int target = 1000 / 60;
+        if ( ms < target ) SDL_Delay( target - ms );
+
         /* delay next scroll step */
         if ( scroll_vert || scroll_hori ) {
             if ( scroll_time > ms ) {
